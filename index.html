@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA & Mobile Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <title>Wallet Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar { width: 0px; }
+        .modal-active { overflow: hidden; height: 100vh; }
+    </style>
+</head>
+<body class="p-5 max-w-md mx-auto">
+
+    <div id="dashboard">
+        <div class="mb-8 mt-6 flex justify-between items-start">
+            <div class="glass p-6 rounded-[2.5rem] flex-1 mr-4 bg-gradient-to-br from-slate-800 to-slate-900">
+                <p class="text-slate-500 text-[10px] uppercase tracking-widest font-black mb-1">Balance</p>
+                <h1 id="totalBalance" class="text-4xl font-black text-white italic">₹0</h1>
+            </div>
+            <button onclick="resetAll()" class="mt-2 text-[10px] text-slate-600 font-bold border border-slate-800 px-3 py-2 rounded-xl active:bg-rose-900">RESET</button>
+        </div>
+
+        <div class="flex gap-4 mb-8">
+            <button onclick="openFlow('IN')" class="h-28 flex-1 bg-emerald-600 active:bg-emerald-500 rounded-3xl flex flex-col items-center justify-center shadow-lg transition-all active:scale-90">
+                <span class="text-3xl font-bold">＋</span>
+                <span class="text-xs font-bold tracking-widest">ADD</span>
+            </button>
+            <button onclick="openFlow('OUT')" class="h-28 flex-1 bg-rose-600 active:bg-rose-500 rounded-3xl flex flex-col items-center justify-center shadow-lg transition-all active:scale-90">
+                <span class="text-3xl font-bold">－</span>
+                <span class="text-xs font-bold tracking-widest">DEDUCT</span>
+            </button>
+        </div>
+
+        <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions..." 
+            class="w-full bg-slate-800/40 border border-slate-700/50 rounded-2xl py-4 px-6 outline-none focus:border-blue-500 mb-6">
+
+        <div id="historyList" class="space-y-3 pb-20"></div>
+    </div>
+
+    <div id="flowModal" class="hidden fixed inset-0 bg-slate-950 flex flex-col z-50">
+        <div class="p-6 flex justify-between items-center">
+            <button onclick="closeModal()" class="text-slate-400 text-sm font-bold flex items-center gap-2">← BACK</button>
+            <button id="deleteBtn" onclick="deleteTransaction()" class="hidden text-rose-500 text-xs font-bold border border-rose-900/50 px-4 py-2 rounded-xl">DELETE</button>
+        </div>
+        <div class="flex-1 flex flex-col px-8 justify-center pb-20">
+            <div id="stepAmount">
+                <p id="flowTitle" class="font-bold mb-2 uppercase text-center"></p>
+                <input type="text" id="amountInput" placeholder="0" inputmode="numeric" oninput="formatInput(this)" class="bg-transparent text-6xl text-center outline-none border-none w-full font-black text-white">
+                <div class="h-1 w-16 bg-blue-600 mx-auto mt-4 mb-12"></div>
+                <button onclick="nextStep()" class="w-full bg-blue-600 py-5 rounded-2xl font-bold text-lg active:scale-95">Next</button>
+            </div>
+            <div id="stepReason" class="hidden">
+                <p class="text-slate-400 mb-4 text-center">Reason</p>
+                <input type="text" id="reasonInput" placeholder="Chai, Bus, etc." class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-2xl w-full mb-8 outline-none text-center">
+                <button onclick="saveTransaction()" class="w-full bg-white text-black py-5 rounded-2xl font-bold text-lg active:scale-95">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tempTx = { type: '', rawAmount: 0, id: null, isEditing: false, lat: null, lon: null };
+        const formatCurrency = (num) => new Intl.NumberFormat('en-IN').format(num);
+        
+        function formatInput(input) {
+            let value = input.value.replace(/\D/g, "");
+            tempTx.rawAmount = value ? parseInt(value) : 0;
+            input.value = value ? formatCurrency(tempTx.rawAmount) : "";
+        }
+
+        window.onpopstate = () => closeModal(true);
+
+        function openFlow(type) {
+            tempTx = { type, rawAmount: 0, id: null, isEditing: false, lat: null, lon: null };
+            document.getElementById('flowTitle').innerText = type === 'IN' ? 'Adding Cash' : 'Spending Cash';
+            document.getElementById('flowTitle').className = type === 'IN' ? 'text-emerald-400 font-bold mb-2 text-center' : 'text-rose-400 font-bold mb-2 text-center';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            history.pushState({ modal: true }, "");
+            document.getElementById('flowModal').classList.remove('hidden');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    tempTx.lat = pos.coords.latitude.toFixed(3);
+                    tempTx.lon = pos.coords.longitude.toFixed(3);
+                });
+            }
+            setTimeout(() => document.getElementById('amountInput').focus(), 200);
+        }
+
+        function openEdit(id) {
+            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+            const item = historyData.find(t => t.id === id);
+            if (!item) return;
+            tempTx = { ...item, rawAmount: item.amount, isEditing: true };
+            document.getElementById('flowTitle').innerText = "Edit Record";
+            document.getElementById('amountInput').value = formatCurrency(item.amount);
+            document.getElementById('reasonInput').value = item.reason;
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            history.pushState({ modal: true }, "");
+            document.getElementById('flowModal').classList.remove('hidden');
+            document.getElementById('stepAmount').classList.add('hidden');
+            document.getElementById('stepReason').classList.remove('hidden');
+            setTimeout(() => document.getElementById('reasonInput').focus(), 200);
+        }
+
+        function closeModal(fromPop = false) {
+            document.getElementById('flowModal').classList.add('hidden');
+            document.getElementById('stepAmount').classList.remove('hidden');
+            document.getElementById('stepReason').classList.add('hidden');
+            if (!fromPop && history.state?.modal) history.back();
+        }
+
+        function nextStep() {
+            if(!tempTx.rawAmount) return;
+            document.getElementById('stepAmount').classList.add('hidden');
+            document.getElementById('stepReason').classList.remove('hidden');
+            setTimeout(() => document.getElementById('reasonInput').focus(), 200);
+        }
+
+        function saveTransaction() {
+            const reason = document.getElementById('reasonInput').value || 'Other';
+            let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+            if (tempTx.isEditing) {
+                historyData = historyData.map(t => (t.id === tempTx.id ? { ...t, amount: tempTx.rawAmount, reason, edited: true } : t));
+            } else {
+                historyData.unshift({
+                    id: Date.now(), type: tempTx.type, amount: tempTx.rawAmount, reason,
+                    time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+                    lat: tempTx.lat, lon: tempTx.lon, edited: false
+                });
+            }
+            localStorage.setItem('wallet_history', JSON.stringify(historyData));
+            closeModal(); render();
+        }
+
+        function deleteTransaction() {
+            if (confirm("Delete entry?")) {
+                let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+                localStorage.setItem('wallet_history', JSON.stringify(historyData.filter(t => t.id !== tempTx.id)));
+                closeModal(); render();
+            }
+        }
+
+        function resetAll() {
+            if (confirm("Clear everything?")) { localStorage.removeItem('wallet_history'); render(); }
+        }
+
+        function render() {
+            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const list = document.getElementById('historyList');
+            let total = 0;
+            list.innerHTML = '';
+            historyData.forEach(tx => tx.type === 'IN' ? total += tx.amount : total -= tx.amount);
+            historyData.filter(tx => tx.reason.toLowerCase().includes(search)).forEach(tx => {
+                const item = document.createElement('div');
+                item.className = 'glass p-5 rounded-[2rem] flex justify-between items-center active:scale-95 transition-all';
+                item.onclick = () => openEdit(tx.id);
+                item.innerHTML = `<div><p class="font-bold text-lg">${tx.reason}</p>
+                    <p class="text-[10px] text-slate-500 font-black mt-1 uppercase">${tx.date} • ${tx.time} ${tx.edited ? '• (edited)' : ''}</p></div>
+                    <p class="font-black text-xl ${tx.type === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">${tx.type === 'IN' ? '+' : '-'}₹${formatCurrency(tx.amount)}</p>`;
+                list.appendChild(item);
+            });
+            document.getElementById('totalBalance').innerText = `₹${formatCurrency(total)}`;
+            document.getElementById('totalBalance').className = `text-4xl font-black italic ${total < 0 ? 'text-rose-500' : 'text-white'}`;
+        }
+        render();
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA Service Worker registered:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
