@@ -24,12 +24,24 @@
 <body class="p-5 max-w-md mx-auto">
 
     <div id="dashboard">
-        <div class="mb-8 mt-6 flex justify-between items-start">
-            <div class="glass p-6 rounded-[2.5rem] flex-1 mr-4 bg-gradient-to-br from-slate-800 to-slate-900">
+        <div class="mb-8 mt-6">
+            <div class="glass p-6 rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 mb-4">
                 <p class="text-slate-500 text-[10px] uppercase tracking-widest font-black mb-1">Balance</p>
                 <h1 id="totalBalance" class="text-4xl font-black text-white italic">₹0</h1>
             </div>
-            <button onclick="resetAll()" class="mt-2 text-[10px] text-slate-600 font-bold border border-slate-800 px-3 py-2 rounded-xl active:bg-rose-900">RESET</button>
+            
+            <!-- Quick Actions Toolbar -->
+            <div class="flex justify-end gap-2">
+                <button onclick="copyData()" class="text-[10px] text-slate-400 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-slate-800">
+                    COPY
+                </button>
+                <button onclick="importData()" class="text-[10px] text-sky-400 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-slate-800">
+                    IMPORT
+                </button>
+                <button onclick="resetAll()" class="text-[10px] text-rose-500 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-rose-950">
+                    RESET
+                </button>
+            </div>
         </div>
 
         <div class="flex gap-4 mb-8">
@@ -49,6 +61,7 @@
         <div id="historyList" class="space-y-3 pb-20"></div>
     </div>
 
+    <!-- Transaction Flow Modal -->
     <div id="flowModal" class="hidden fixed inset-0 bg-slate-950 flex flex-col z-50">
         <div class="p-6 flex justify-between items-center">
             <button onclick="closeModal()" class="text-slate-400 text-sm font-bold flex items-center gap-2">← BACK</button>
@@ -154,6 +167,41 @@
 
         function resetAll() {
             if (confirm("Clear everything?")) { localStorage.removeItem('wallet_history'); render(); }
+        }
+
+        // Copy / Export Feature
+        function copyData() {
+            const data = localStorage.getItem('wallet_history') || '[]';
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(data)
+                    .then(() => alert("Data copied to clipboard!"))
+                    .catch(() => fallbackPrompt(data));
+            } else {
+                fallbackPrompt(data);
+            }
+        }
+
+        function fallbackPrompt(data) {
+            prompt("Copy your backup data below:", data);
+        }
+
+        // Import Feature
+        function importData() {
+            const pasted = prompt("Paste your backup data here:");
+            if (!pasted) return;
+
+            try {
+                const parsed = JSON.parse(pasted);
+                if (Array.isArray(parsed)) {
+                    localStorage.setItem('wallet_history', JSON.stringify(parsed));
+                    alert("Import successful!");
+                    render();
+                } else {
+                    alert("Invalid data format: Expected a transaction list.");
+                }
+            } catch (err) {
+                alert("Failed to parse data. Make sure it is valid JSON.");
+            }
         }
 
         function render() {
