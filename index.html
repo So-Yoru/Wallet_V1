@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <!-- PWA & Mobile Meta Tags -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#090d16">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,222 +15,639 @@
     <title>Wallet Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        ::-webkit-scrollbar { width: 0px; }
-        .modal-active { overflow: hidden; height: 100vh; }
+        :root {
+            --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
+            --ios-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        body { 
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 65%);
+            color: #f8fafc; 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif; 
+            overflow-x: hidden; 
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        .glass-card { 
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(28px); 
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-pill {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+        }
+
+        .spring-press {
+            transition: transform 0.2s var(--ios-bounce), opacity 0.2s ease;
+        }
+        .spring-press:active {
+            transform: scale(0.94);
+            opacity: 0.85;
+        }
+
+        ::-webkit-scrollbar { width: 0px; height: 0px; }
+        .hide-tab { display: none !important; }
     </style>
 </head>
-<body class="p-5 max-w-md mx-auto">
+<body class="p-5 max-w-md mx-auto pb-32 select-none">
 
-    <div id="dashboard">
-        <div class="mb-8 mt-6">
-            <div class="glass p-6 rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 mb-4">
-                <p class="text-slate-500 text-[10px] uppercase tracking-widest font-black mb-1">Balance</p>
-                <h1 id="totalBalance" class="text-4xl font-black text-white italic">₹0</h1>
+    <!-- ==================== TAB 1: WALLET ==================== -->
+    <main id="tabTransactions">
+        <!-- Balance Card -->
+        <div class="glass-card p-6 rounded-[2.5rem] mt-3 mb-4 relative overflow-hidden">
+            <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-[11px] uppercase tracking-widest font-black text-slate-400">Total Balance</span>
+                <div class="flex gap-1.5">
+                    <button onclick="exportBackupFile()" class="spring-press text-[10px] text-slate-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40">EXPORT</button>
+                    <label class="spring-press text-[10px] text-sky-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40 cursor-pointer">
+                        RESTORE
+                        <input type="file" id="importFileInput" accept=".json,.wallet" class="hidden" onchange="importBackupFile(event)">
+                    </label>
+                    <button onclick="resetAll()" class="spring-press text-[10px] text-rose-400 font-bold border border-rose-900/60 px-2.5 py-1.5 rounded-xl bg-rose-950/30">RESET</button>
+                </div>
             </div>
-            
-            <!-- Quick Actions Toolbar -->
-            <div class="flex justify-end gap-2">
-                <button onclick="copyData()" class="text-[10px] text-slate-400 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-slate-800">
-                    COPY
-                </button>
-                <button onclick="importData()" class="text-[10px] text-sky-400 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-slate-800">
-                    IMPORT
-                </button>
-                <button onclick="resetAll()" class="text-[10px] text-rose-500 font-bold border border-slate-800 px-3 py-1.5 rounded-xl active:bg-rose-950">
-                    RESET
-                </button>
+            <h1 id="totalBalance" class="text-4xl font-black text-white italic tracking-tight">₹0</h1>
+
+            <!-- Health Bars -->
+            <div class="mt-5 pt-4 border-t border-white/10 space-y-3.5">
+                <div>
+                    <div class="flex justify-between text-[11px] font-bold mb-1.5">
+                        <span class="text-slate-400">Wallet Retained</span>
+                        <span id="retainedPctLabel" class="text-sky-400 font-black">100%</span>
+                    </div>
+                    <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden p-0.5 border border-white/5">
+                        <div id="retainedBar" class="bg-sky-400 h-full rounded-full transition-all duration-500" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-[11px] font-bold mb-1.5">
+                        <span class="text-slate-400">Today's Spends (<span id="dailySpentLabel">₹0</span>)</span>
+                        <button onclick="editDailyBudget()" class="spring-press text-amber-300 font-black flex items-center gap-1 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg">
+                            <span>Limit: ₹</span><span id="dailyLimitLabel">500</span> <span>✏️</span>
+                        </button>
+                    </div>
+                    <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden p-0.5 border border-white/5">
+                        <div id="dailyBudgetBar" class="bg-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="flex gap-4 mb-8">
-            <button onclick="openFlow('IN')" class="h-28 flex-1 bg-emerald-600 active:bg-emerald-500 rounded-3xl flex flex-col items-center justify-center shadow-lg transition-all active:scale-90">
-                <span class="text-3xl font-bold">＋</span>
-                <span class="text-xs font-bold tracking-widest">ADD</span>
+        <!-- Customizable Quick Chips -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-2.5 px-1">
+                <span class="text-[11px] text-slate-400 uppercase tracking-widest font-black">Quick Add</span>
+                <span class="text-[10px] text-slate-500 italic">Hold to remove</span>
+            </div>
+            <div id="chipsContainer" class="flex gap-2.5 overflow-x-auto pb-1 items-center"></div>
+        </div>
+
+        <!-- Big IN / OUT Buttons -->
+        <div class="flex gap-4 mb-6">
+            <button type="button" onclick="openFlow('IN')" class="spring-press h-24 flex-1 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl flex flex-col items-center justify-center shadow-lg shadow-emerald-950/50 border border-emerald-400/30 cursor-pointer">
+                <span class="text-3xl font-black">＋</span>
+                <span class="text-xs font-black tracking-widest uppercase">Income</span>
             </button>
-            <button onclick="openFlow('OUT')" class="h-28 flex-1 bg-rose-600 active:bg-rose-500 rounded-3xl flex flex-col items-center justify-center shadow-lg transition-all active:scale-90">
-                <span class="text-3xl font-bold">－</span>
-                <span class="text-xs font-bold tracking-widest">DEDUCT</span>
+            <button type="button" onclick="openFlow('OUT')" class="spring-press h-24 flex-1 bg-gradient-to-br from-rose-500 to-rose-700 rounded-3xl flex flex-col items-center justify-center shadow-lg shadow-rose-950/50 border border-rose-400/30 cursor-pointer">
+                <span class="text-3xl font-black">－</span>
+                <span class="text-xs font-black tracking-widest uppercase">Expense</span>
             </button>
         </div>
 
-        <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions..." 
-            class="w-full bg-slate-800/40 border border-slate-700/50 rounded-2xl py-4 px-6 outline-none focus:border-blue-500 mb-6">
+        <!-- Search Bar -->
+        <div class="relative mb-5">
+            <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions..." 
+                class="w-full bg-slate-800/40 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-400 text-sm placeholder-slate-500 glass-pill">
+            <span class="absolute left-4 top-3.5 text-slate-500 text-sm">🔍</span>
+        </div>
 
-        <div id="historyList" class="space-y-3 pb-20"></div>
+        <!-- History Records -->
+        <div id="historyList" class="space-y-3 pb-8"></div>
+    </main>
+
+    <!-- ==================== TAB 2: ANALYTICS ==================== -->
+    <main id="tabAnalytics" class="hide-tab">
+        <div class="mt-4 mb-6">
+            <h2 class="text-2xl font-black tracking-tight">Spending Analytics</h2>
+            <p class="text-slate-400 text-xs mt-1">Daily trends and dynamic category distribution</p>
+        </div>
+
+        <div class="glass-card p-6 rounded-[2.5rem] mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xs uppercase tracking-widest font-black text-slate-400">Past 7 Days</span>
+                <span id="sevenDayTotal" class="text-xs font-bold text-rose-400">₹0</span>
+            </div>
+            <div id="weeklyChart" class="h-36 flex items-end justify-between gap-2 pt-6"></div>
+        </div>
+
+        <div class="glass-card p-6 rounded-[2.5rem]">
+            <span class="text-xs uppercase tracking-widest font-black text-slate-400 mb-4 block">Categories</span>
+            <div id="categoryList" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <!-- ==================== CLEAN 2-ITEM BOTTOM NAV ==================== -->
+    <div class="fixed bottom-6 left-0 right-0 max-w-xs mx-auto px-4 z-30">
+        <nav class="glass-pill rounded-[2rem] px-6 py-2.5 flex justify-around items-center border border-white/15 shadow-2xl">
+            <button id="navTx" onclick="switchTab('tx')" class="spring-press flex items-center gap-2 text-blue-400 cursor-pointer">
+                <span class="text-lg">💳</span>
+                <span class="text-xs font-black uppercase tracking-wider">Wallet</span>
+            </button>
+            <div class="w-px h-6 bg-white/10"></div>
+            <button id="navAnalytics" onclick="switchTab('analytics')" class="spring-press flex items-center gap-2 text-slate-400 cursor-pointer">
+                <span class="text-lg">📊</span>
+                <span class="text-xs font-black uppercase tracking-wider">Analytics</span>
+            </button>
+        </nav>
     </div>
 
-    <!-- Transaction Flow Modal -->
-    <div id="flowModal" class="hidden fixed inset-0 bg-slate-950 flex flex-col z-50">
-        <div class="p-6 flex justify-between items-center">
-            <button onclick="closeModal()" class="text-slate-400 text-sm font-bold flex items-center gap-2">← BACK</button>
-            <button id="deleteBtn" onclick="deleteTransaction()" class="hidden text-rose-500 text-xs font-bold border border-rose-900/50 px-4 py-2 rounded-xl">DELETE</button>
-        </div>
-        <div class="flex-1 flex flex-col px-8 justify-center pb-20">
-            <div id="stepAmount">
-                <p id="flowTitle" class="font-bold mb-2 uppercase text-center"></p>
-                <input type="text" id="amountInput" placeholder="0" inputmode="numeric" oninput="formatInput(this)" class="bg-transparent text-6xl text-center outline-none border-none w-full font-black text-white">
-                <div class="h-1 w-16 bg-blue-600 mx-auto mt-4 mb-12"></div>
-                <button onclick="nextStep()" class="w-full bg-blue-600 py-5 rounded-2xl font-bold text-lg active:scale-95">Next</button>
+    <!-- ==================== TRANSACTION MODAL ==================== -->
+    <div id="flowModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onclick="closeModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+        <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
+            <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+            
+            <div class="flex justify-between items-center mb-5">
+                <button type="button" onclick="closeModal()" class="text-slate-400 text-sm font-bold spring-press">Cancel</button>
+                <p id="flowTitle" class="font-black text-sm uppercase tracking-widest text-white"></p>
+                <button id="deleteBtn" type="button" onclick="deleteTransaction()" class="hidden text-rose-500 text-xs font-bold border border-rose-900/60 px-3 py-1.5 rounded-xl spring-press">Delete</button>
             </div>
-            <div id="stepReason" class="hidden">
-                <p class="text-slate-400 mb-4 text-center">Reason</p>
-                <input type="text" id="reasonInput" placeholder="Chai, Bus, etc." class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-2xl w-full mb-8 outline-none text-center">
-                <button onclick="saveTransaction()" class="w-full bg-white text-black py-5 rounded-2xl font-bold text-lg active:scale-95">Save</button>
+
+            <!-- Amount Input -->
+            <div class="mb-6">
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Amount</p>
+                <div class="flex items-center justify-center bg-slate-800/50 rounded-2xl p-3 border border-white/10">
+                    <span class="text-3xl font-black text-slate-400 mr-2">₹</span>
+                    <input type="number" id="numAmount" placeholder="0" class="bg-transparent text-4xl text-left outline-none border-none font-black text-white w-48" inputmode="numeric">
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="mb-5">
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2.5">Category</p>
+                <div class="grid grid-cols-4 gap-2">
+                    <button type="button" onclick="setCategory('Food')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Food</button>
+                    <button type="button" onclick="setCategory('Travel')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Travel</button>
+                    <button type="button" onclick="setCategory('Bills')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Bills</button>
+                    <button type="button" onclick="setCategory('Other')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Other</button>
+                </div>
+            </div>
+
+            <!-- Reason / Note -->
+            <div class="mb-6">
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Reason / Note</p>
+                <input type="text" id="reasonInput" placeholder="Chai, Lunch, Metro, etc." class="glass-pill border border-white/10 p-3.5 rounded-2xl text-base w-full outline-none text-center text-white">
+            </div>
+
+            <!-- Submit -->
+            <button type="button" onclick="saveTransaction()" class="spring-press w-full bg-white text-black py-4 rounded-2xl font-black text-base shadow-xl">
+                Save Transaction
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== CUSTOM CHIP CREATOR MODAL ==================== -->
+    <div id="chipModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onclick="closeChipModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
+            <h3 class="text-base font-black text-center mb-4 tracking-tight">Create Quick Chip</h3>
+            <div class="space-y-3 mb-5">
+                <input type="text" id="newChipEmoji" placeholder="Emoji (e.g. ☕, 🚇, 🍔)" maxlength="2" class="glass-pill w-full text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
+                <input type="text" id="newChipLabel" placeholder="Label (e.g. Chai, Bus)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+                <input type="number" id="newChipAmount" placeholder="Default Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="closeChipModal()" class="spring-press flex-1 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-bold text-sm">Cancel</button>
+                <button type="button" onclick="saveCustomChip()" class="spring-press flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm">Save Chip</button>
             </div>
         </div>
     </div>
 
     <script>
-        let tempTx = { type: '', rawAmount: 0, id: null, isEditing: false, lat: null, lon: null };
+        let currentFlow = { type: 'OUT', id: null, isEditing: false, category: 'Food' };
         const formatCurrency = (num) => new Intl.NumberFormat('en-IN').format(num);
-        
-        function formatInput(input) {
-            let value = input.value.replace(/\D/g, "");
-            tempTx.rawAmount = value ? parseInt(value) : 0;
-            input.value = value ? formatCurrency(tempTx.rawAmount) : "";
+
+        const DEFAULT_CHIPS = [
+            { emoji: '☕', label: 'Chai', amount: 15, category: 'Food' },
+            { emoji: '🚇', label: 'Travel', amount: 30, category: 'Travel' },
+            { emoji: '🍱', label: 'Lunch', amount: 100, category: 'Food' }
+        ];
+
+        function getCustomChips() {
+            const raw = localStorage.getItem('wallet_custom_chips');
+            return raw ? JSON.parse(raw) : DEFAULT_CHIPS;
         }
 
-        window.onpopstate = () => closeModal(true);
+        function renderChips() {
+            const container = document.getElementById('chipsContainer');
+            const chips = getCustomChips();
+            container.innerHTML = '';
+
+            chips.forEach((c, index) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'glass-pill px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap spring-press border-white/10 flex items-center gap-1.5 flex-shrink-0 cursor-pointer';
+                btn.innerHTML = `<span>${c.emoji}</span> <span>${c.label}</span> <span class="text-emerald-400 font-black">₹${c.amount}</span>`;
+                btn.onclick = () => quickExpense(c.amount, c.label, c.category);
+
+                let timer;
+                btn.onmousedown = btn.ontouchstart = () => {
+                    timer = setTimeout(() => {
+                        if (confirm(`Delete chip "${c.label}"?`)) {
+                            chips.splice(index, 1);
+                            localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
+                            renderChips();
+                        }
+                    }, 650);
+                };
+                btn.onmouseup = btn.ontouchend = () => clearTimeout(timer);
+
+                container.appendChild(btn);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'glass-pill px-3.5 py-2.5 rounded-2xl text-xs font-black text-blue-400 spring-press border-dashed border-blue-500/40 flex-shrink-0 cursor-pointer';
+            addBtn.innerHTML = '＋ New';
+            addBtn.onclick = openChipModal;
+            container.appendChild(addBtn);
+        }
+
+        function openChipModal() {
+            document.getElementById('chipModal').classList.remove('hidden');
+        }
+        function closeChipModal() {
+            document.getElementById('chipModal').classList.add('hidden');
+        }
+
+        function saveCustomChip() {
+            const emoji = document.getElementById('newChipEmoji').value.trim() || '💳';
+            const label = document.getElementById('newChipLabel').value.trim() || 'Item';
+            const amount = parseInt(document.getElementById('newChipAmount').value, 10) || 0;
+
+            if (amount <= 0) {
+                alert('Enter a valid amount');
+                return;
+            }
+
+            const chips = getCustomChips();
+            chips.push({ emoji, label, amount, category: 'Food' });
+            localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
+            
+            document.getElementById('newChipEmoji').value = '';
+            document.getElementById('newChipLabel').value = '';
+            document.getElementById('newChipAmount').value = '';
+            closeChipModal();
+            renderChips();
+        }
+
+        function quickExpense(amount, reason, category) {
+            let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+            const now = new Date();
+            historyData.unshift({
+                id: Date.now(),
+                type: 'OUT',
+                amount: Number(amount),
+                reason: reason,
+                category: category || 'Food',
+                time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+                timestamp: now.getTime(),
+                edited: false
+            });
+            localStorage.setItem('wallet_history', JSON.stringify(historyData));
+            render();
+        }
+
+        function switchTab(tab) {
+            const txView = document.getElementById('tabTransactions');
+            const analyticsView = document.getElementById('tabAnalytics');
+            const navTx = document.getElementById('navTx');
+            const navAnalytics = document.getElementById('navAnalytics');
+
+            if (tab === 'tx') {
+                txView.classList.remove('hide-tab');
+                analyticsView.classList.add('hide-tab');
+                navTx.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
+                navAnalytics.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
+                render();
+            } else {
+                txView.classList.add('hide-tab');
+                analyticsView.classList.remove('hide-tab');
+                navTx.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
+                navAnalytics.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
+                renderAnalytics();
+            }
+        }
+
+        function setCategory(cat) {
+            currentFlow.category = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if (btn.innerText === cat) {
+                    btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-blue-500 bg-blue-600 text-white spring-press';
+                } else {
+                    btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press';
+                }
+            });
+        }
 
         function openFlow(type) {
-            tempTx = { type, rawAmount: 0, id: null, isEditing: false, lat: null, lon: null };
-            document.getElementById('flowTitle').innerText = type === 'IN' ? 'Adding Cash' : 'Spending Cash';
-            document.getElementById('flowTitle').className = type === 'IN' ? 'text-emerald-400 font-bold mb-2 text-center' : 'text-rose-400 font-bold mb-2 text-center';
+            currentFlow = { type: type, id: null, isEditing: false, category: 'Food' };
+            const titleEl = document.getElementById('flowTitle');
+            titleEl.innerText = type === 'IN' ? 'Income' : 'Expense';
+            titleEl.className = type === 'IN' ? 'font-black text-sm uppercase tracking-widest text-emerald-400' : 'font-black text-sm uppercase tracking-widest text-rose-400';
+            
+            document.getElementById('numAmount').value = '';
+            document.getElementById('reasonInput').value = '';
             document.getElementById('deleteBtn').classList.add('hidden');
-            history.pushState({ modal: true }, "");
+            setCategory('Food');
+
             document.getElementById('flowModal').classList.remove('hidden');
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    tempTx.lat = pos.coords.latitude.toFixed(3);
-                    tempTx.lon = pos.coords.longitude.toFixed(3);
-                });
-            }
-            setTimeout(() => document.getElementById('amountInput').focus(), 200);
+            setTimeout(() => document.getElementById('numAmount').focus(), 150);
         }
 
         function openEdit(id) {
             const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
             const item = historyData.find(t => t.id === id);
             if (!item) return;
-            tempTx = { ...item, rawAmount: item.amount, isEditing: true };
-            document.getElementById('flowTitle').innerText = "Edit Record";
-            document.getElementById('amountInput').value = formatCurrency(item.amount);
+
+            currentFlow = { type: item.type, id: item.id, isEditing: true, category: item.category || 'Other' };
+            const titleEl = document.getElementById('flowTitle');
+            titleEl.innerText = "Edit Entry";
+            titleEl.className = 'font-black text-sm uppercase tracking-widest text-white';
+
+            document.getElementById('numAmount').value = item.amount;
             document.getElementById('reasonInput').value = item.reason;
+            setCategory(currentFlow.category);
             document.getElementById('deleteBtn').classList.remove('hidden');
-            history.pushState({ modal: true }, "");
+
             document.getElementById('flowModal').classList.remove('hidden');
-            document.getElementById('stepAmount').classList.add('hidden');
-            document.getElementById('stepReason').classList.remove('hidden');
-            setTimeout(() => document.getElementById('reasonInput').focus(), 200);
+            setTimeout(() => document.getElementById('reasonInput').focus(), 150);
         }
 
-        function closeModal(fromPop = false) {
+        function closeModal() {
             document.getElementById('flowModal').classList.add('hidden');
-            document.getElementById('stepAmount').classList.remove('hidden');
-            document.getElementById('stepReason').classList.add('hidden');
-            if (!fromPop && history.state?.modal) history.back();
-        }
-
-        function nextStep() {
-            if(!tempTx.rawAmount) return;
-            document.getElementById('stepAmount').classList.add('hidden');
-            document.getElementById('stepReason').classList.remove('hidden');
-            setTimeout(() => document.getElementById('reasonInput').focus(), 200);
         }
 
         function saveTransaction() {
-            const reason = document.getElementById('reasonInput').value || 'Other';
+            const amountVal = parseFloat(document.getElementById('numAmount').value);
+            if (!amountVal || isNaN(amountVal) || amountVal <= 0) {
+                alert("Please enter a valid amount");
+                return;
+            }
+
+            const reason = document.getElementById('reasonInput').value.trim() || 'Other';
             let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
-            if (tempTx.isEditing) {
-                historyData = historyData.map(t => (t.id === tempTx.id ? { ...t, amount: tempTx.rawAmount, reason, edited: true } : t));
+            const now = new Date();
+
+            if (currentFlow.isEditing) {
+                historyData = historyData.map(t => (t.id === currentFlow.id ? { 
+                    ...t, 
+                    amount: amountVal, 
+                    reason: reason, 
+                    category: currentFlow.category, 
+                    edited: true 
+                } : t));
             } else {
                 historyData.unshift({
-                    id: Date.now(), type: tempTx.type, amount: tempTx.rawAmount, reason,
-                    time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-                    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-                    lat: tempTx.lat, lon: tempTx.lon, edited: false
+                    id: Date.now(), 
+                    type: currentFlow.type, 
+                    amount: amountVal, 
+                    reason: reason,
+                    category: currentFlow.category,
+                    time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+                    timestamp: now.getTime(),
+                    edited: false
                 });
             }
+
             localStorage.setItem('wallet_history', JSON.stringify(historyData));
-            closeModal(); render();
+            closeModal(); 
+            render();
         }
 
         function deleteTransaction() {
-            if (confirm("Delete entry?")) {
+            if (confirm("Delete this entry?")) {
                 let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
-                localStorage.setItem('wallet_history', JSON.stringify(historyData.filter(t => t.id !== tempTx.id)));
-                closeModal(); render();
+                localStorage.setItem('wallet_history', JSON.stringify(historyData.filter(t => t.id !== currentFlow.id)));
+                closeModal(); 
+                render();
             }
         }
 
+        // Reset All Data
         function resetAll() {
-            if (confirm("Clear everything?")) { localStorage.removeItem('wallet_history'); render(); }
-        }
-
-        // Copy / Export Feature
-        function copyData() {
-            const data = localStorage.getItem('wallet_history') || '[]';
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(data)
-                    .then(() => alert("Data copied to clipboard!"))
-                    .catch(() => fallbackPrompt(data));
-            } else {
-                fallbackPrompt(data);
+            if (confirm("Clear all transactions and reset balance to ₹0?")) {
+                localStorage.removeItem('wallet_history');
+                render();
             }
         }
 
-        function fallbackPrompt(data) {
-            prompt("Copy your backup data below:", data);
-        }
-
-        // Import Feature
-        function importData() {
-            const pasted = prompt("Paste your backup data here:");
-            if (!pasted) return;
-
-            try {
-                const parsed = JSON.parse(pasted);
-                if (Array.isArray(parsed)) {
-                    localStorage.setItem('wallet_history', JSON.stringify(parsed));
-                    alert("Import successful!");
-                    render();
-                } else {
-                    alert("Invalid data format: Expected a transaction list.");
-                }
-            } catch (err) {
-                alert("Failed to parse data. Make sure it is valid JSON.");
+        function editDailyBudget() {
+            const current = localStorage.getItem('wallet_daily_limit') || 500;
+            const updated = prompt("Set your target daily spend limit (₹):", current);
+            if (updated !== null && !isNaN(updated) && Number(updated) > 0) {
+                localStorage.setItem('wallet_daily_limit', Number(updated));
+                render();
             }
         }
 
         function render() {
             const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const search = (document.getElementById('searchInput').value || '').toLowerCase();
             const list = document.getElementById('historyList');
-            let total = 0;
+            let totalBalance = 0;
+            let totalIncome = 0;
+            let todaySpent = 0;
+            const todayStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
             list.innerHTML = '';
-            historyData.forEach(tx => tx.type === 'IN' ? total += tx.amount : total -= tx.amount);
-            historyData.filter(tx => tx.reason.toLowerCase().includes(search)).forEach(tx => {
+
+            historyData.forEach(tx => {
+                const amt = Number(tx.amount) || 0;
+                if (tx.type === 'IN') {
+                    totalBalance += amt;
+                    totalIncome += amt;
+                } else {
+                    totalBalance -= amt;
+                    if (tx.date === todayStr) todaySpent += amt;
+                }
+            });
+
+            // 1. Wallet Retained Bar
+            const retainedBar = document.getElementById('retainedBar');
+            const retainedLabel = document.getElementById('retainedPctLabel');
+            if (totalIncome > 0) {
+                const retainedPct = Math.max(0, Math.min(Math.round((totalBalance / totalIncome) * 100), 100));
+                retainedBar.style.width = `${retainedPct}%`;
+                retainedLabel.innerText = `${retainedPct}% remaining`;
+                retainedBar.className = retainedPct <= 20 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' :
+                                        retainedPct <= 50 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 
+                                                            'bg-sky-400 h-full rounded-full transition-all duration-500';
+            } else {
+                retainedBar.style.width = totalBalance > 0 ? '100%' : '0%';
+                retainedLabel.innerText = totalBalance > 0 ? 'Positive' : '0%';
+            }
+
+            // 2. Daily Limit Gauge
+            const dailyLimit = parseInt(localStorage.getItem('wallet_daily_limit') || 500, 10);
+            document.getElementById('dailyLimitLabel').innerText = formatCurrency(dailyLimit);
+            document.getElementById('dailySpentLabel').innerText = `₹${formatCurrency(todaySpent)}`;
+            const budgetPct = Math.min(Math.round((todaySpent / dailyLimit) * 100), 100);
+            const budgetBar = document.getElementById('dailyBudgetBar');
+            budgetBar.style.width = `${budgetPct}%`;
+            budgetBar.className = budgetPct >= 90 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' :
+                                  budgetPct >= 65 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 
+                                                    'bg-emerald-400 h-full rounded-full transition-all duration-500';
+
+            // Filter & Render List
+            historyData.filter(tx => (tx.reason || '').toLowerCase().includes(search)).forEach(tx => {
                 const item = document.createElement('div');
-                item.className = 'glass p-5 rounded-[2rem] flex justify-between items-center active:scale-95 transition-all';
+                item.className = 'glass-card p-4 rounded-3xl flex justify-between items-center spring-press cursor-pointer';
                 item.onclick = () => openEdit(tx.id);
-                item.innerHTML = `<div><p class="font-bold text-lg">${tx.reason}</p>
-                    <p class="text-[10px] text-slate-500 font-black mt-1 uppercase">${tx.date} • ${tx.time} ${tx.edited ? '• (edited)' : ''}</p></div>
-                    <p class="font-black text-xl ${tx.type === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">${tx.type === 'IN' ? '+' : '-'}₹${formatCurrency(tx.amount)}</p>`;
+                item.innerHTML = `<div>
+                    <div class="flex items-center gap-2">
+                        <p class="font-bold text-sm tracking-tight">${tx.reason}</p>
+                        <span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 font-bold uppercase border border-white/5">${tx.category || 'Other'}</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-bold mt-1 uppercase">${tx.date} • ${tx.time} ${tx.edited ? '• (edited)' : ''}</p>
+                </div>
+                <p class="font-black text-lg ${tx.type === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${tx.type === 'IN' ? '+' : '-'}₹${formatCurrency(tx.amount)}
+                </p>`;
                 list.appendChild(item);
             });
-            document.getElementById('totalBalance').innerText = `₹${formatCurrency(total)}`;
-            document.getElementById('totalBalance').className = `text-4xl font-black italic ${total < 0 ? 'text-rose-500' : 'text-white'}`;
+
+            document.getElementById('totalBalance').innerText = `₹${formatCurrency(totalBalance)}`;
+            document.getElementById('totalBalance').className = `text-4xl font-black italic tracking-tight ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
         }
+
+        function renderAnalytics() {
+            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+            const chart = document.getElementById('weeklyChart');
+            const catList = document.getElementById('categoryList');
+            chart.innerHTML = '';
+            catList.innerHTML = '';
+
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                days.push({
+                    dateKey: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+                    dayName: d.toLocaleDateString('en-IN', { weekday: 'narrow' }),
+                    total: 0
+                });
+            }
+
+            const categories = {};
+            let totalOut = 0;
+            let sevenDaySpend = 0;
+
+            historyData.forEach(tx => {
+                const amt = Number(tx.amount) || 0;
+                if (tx.type === 'OUT') {
+                    totalOut += amt;
+                    const cat = tx.category || 'Other';
+                    categories[cat] = (categories[cat] || 0) + amt;
+
+                    const matchDay = days.find(d => d.dateKey === tx.date);
+                    if (matchDay) {
+                        matchDay.total += amt;
+                        sevenDaySpend += amt;
+                    }
+                }
+            });
+
+            document.getElementById('sevenDayTotal').innerText = `Total: ₹${formatCurrency(sevenDaySpend)}`;
+
+            const maxVal = Math.max(...days.map(d => d.total), 100);
+            days.forEach(d => {
+                const barHeight = Math.round((d.total / maxVal) * 90);
+                const col = document.createElement('div');
+                col.className = 'flex-1 flex flex-col items-center gap-1.5 h-full justify-end';
+                col.innerHTML = `
+                    <span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>
+                    <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
+                    <span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>
+                `;
+                chart.appendChild(col);
+            });
+
+            if (Object.keys(categories).length === 0) {
+                catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending records yet.</p>`;
+                return;
+            }
+
+            Object.entries(categories).forEach(([name, amt]) => {
+                const pct = Math.round((amt / (totalOut || 1)) * 100);
+                const row = document.createElement('div');
+                row.innerHTML = `
+                    <div class="flex justify-between text-xs font-bold mb-1.5">
+                        <span>${name}</span>
+                        <span class="text-slate-400">₹${formatCurrency(amt)} (${pct}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-white/5">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                catList.appendChild(row);
+            });
+        }
+
+        function exportBackupFile() {
+            const data = localStorage.getItem('wallet_history') || '[]';
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wallet-backup-${new Date().toISOString().slice(0, 10)}.wallet`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importBackupFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed)) {
+                        localStorage.setItem('wallet_history', JSON.stringify(parsed));
+                        alert("Backup restored!");
+                        render();
+                    } else {
+                        alert("Invalid backup file format.");
+                    }
+                } catch (err) {
+                    alert("Error parsing file.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        renderChips();
         render();
 
-        // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('PWA Service Worker registered:', reg.scope))
-                    .catch(err => console.error('Service Worker registration failed:', err));
+                navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
             });
         }
     </script>
