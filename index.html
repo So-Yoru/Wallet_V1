@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- PWA & Mobile Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#090d16">
     <meta name="mobile-web-app-capable" content="yes">
@@ -59,15 +58,14 @@
 </head>
 <body class="p-5 max-w-md mx-auto pb-32 select-none">
 
-    <!-- ==================== TAB 1: WALLET ==================== -->
+    <!-- TAB 1: WALLET -->
     <main id="tabTransactions">
-        <!-- Balance Card -->
         <div class="glass-card p-6 rounded-[2.5rem] mt-3 mb-4 relative overflow-hidden">
             <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
             <div class="flex justify-between items-start mb-2">
                 <span class="text-[11px] uppercase tracking-widest font-black text-slate-400">Total Balance</span>
                 <div class="flex gap-1.5">
-                    <button onclick="exportBackupFile()" class="spring-press text-[10px] text-slate-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40">EXPORT</button>
+                    <button onclick="openExportModal()" class="spring-press text-[10px] text-slate-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40">EXPORT</button>
                     <label class="spring-press text-[10px] text-sky-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40 cursor-pointer">
                         RESTORE
                         <input type="file" id="importFileInput" accept=".json,.wallet" class="hidden" onchange="importBackupFile(event)">
@@ -77,7 +75,6 @@
             </div>
             <h1 id="totalBalance" class="text-4xl font-black text-white italic tracking-tight">₹0</h1>
 
-            <!-- Health Bars -->
             <div class="mt-5 pt-4 border-t border-white/10 space-y-3.5">
                 <div>
                     <div class="flex justify-between text-[11px] font-bold mb-1.5">
@@ -103,7 +100,7 @@
             </div>
         </div>
 
-        <!-- Customizable Quick Chips -->
+        <!-- Quick Chips -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-2.5 px-1">
                 <span class="text-[11px] text-slate-400 uppercase tracking-widest font-black">Quick Add</span>
@@ -112,7 +109,6 @@
             <div id="chipsContainer" class="flex gap-2.5 overflow-x-auto pb-1 items-center"></div>
         </div>
 
-        <!-- Big IN / OUT Buttons -->
         <div class="flex gap-4 mb-6">
             <button type="button" onclick="openFlow('IN')" class="spring-press h-24 flex-1 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-3xl flex flex-col items-center justify-center shadow-lg shadow-emerald-950/50 border border-emerald-400/30 cursor-pointer">
                 <span class="text-3xl font-black">＋</span>
@@ -124,22 +120,20 @@
             </button>
         </div>
 
-        <!-- Search Bar -->
         <div class="relative mb-5">
             <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions..." 
                 class="w-full bg-slate-800/40 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-400 text-sm placeholder-slate-500 glass-pill">
             <span class="absolute left-4 top-3.5 text-slate-500 text-sm">🔍</span>
         </div>
 
-        <!-- History Records -->
         <div id="historyList" class="space-y-3 pb-8"></div>
     </main>
 
-    <!-- ==================== TAB 2: ANALYTICS ==================== -->
+    <!-- TAB 2: ANALYTICS -->
     <main id="tabAnalytics" class="hide-tab">
         <div class="mt-4 mb-6">
             <h2 class="text-2xl font-black tracking-tight">Spending Analytics</h2>
-            <p class="text-slate-400 text-xs mt-1">Daily trends and dynamic category distribution</p>
+            <p class="text-slate-400 text-xs mt-1">Daily trends and category distribution</p>
         </div>
 
         <div class="glass-card p-6 rounded-[2.5rem] mb-6">
@@ -156,7 +150,7 @@
         </div>
     </main>
 
-    <!-- ==================== CLEAN 2-ITEM BOTTOM NAV ==================== -->
+    <!-- BOTTOM NAV -->
     <div class="fixed bottom-6 left-0 right-0 max-w-xs mx-auto px-4 z-30">
         <nav class="glass-pill rounded-[2rem] px-6 py-2.5 flex justify-around items-center border border-white/15 shadow-2xl">
             <button id="navTx" onclick="switchTab('tx')" class="spring-press flex items-center gap-2 text-blue-400 cursor-pointer">
@@ -171,10 +165,9 @@
         </nav>
     </div>
 
-    <!-- ==================== TRANSACTION MODAL ==================== -->
+    <!-- MAIN TRANSACTION MODAL -->
     <div id="flowModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
-
         <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
             <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
             
@@ -184,7 +177,6 @@
                 <button id="deleteBtn" type="button" onclick="deleteTransaction()" class="hidden text-rose-500 text-xs font-bold border border-rose-900/60 px-3 py-1.5 rounded-xl spring-press">Delete</button>
             </div>
 
-            <!-- Amount Input -->
             <div class="mb-6">
                 <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Amount</p>
                 <div class="flex items-center justify-center bg-slate-800/50 rounded-2xl p-3 border border-white/10">
@@ -193,7 +185,6 @@
                 </div>
             </div>
 
-            <!-- Categories -->
             <div class="mb-5">
                 <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2.5">Category</p>
                 <div class="grid grid-cols-4 gap-2">
@@ -204,28 +195,26 @@
                 </div>
             </div>
 
-            <!-- Reason / Note -->
             <div class="mb-6">
                 <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Reason / Note</p>
                 <input type="text" id="reasonInput" placeholder="Chai, Lunch, Metro, etc." class="glass-pill border border-white/10 p-3.5 rounded-2xl text-base w-full outline-none text-center text-white">
             </div>
 
-            <!-- Submit -->
             <button type="button" onclick="saveTransaction()" class="spring-press w-full bg-white text-black py-4 rounded-2xl font-black text-base shadow-xl">
                 Save Transaction
             </button>
         </div>
     </div>
 
-    <!-- ==================== CUSTOM CHIP CREATOR MODAL ==================== -->
+    <!-- NEW CHIP MODAL -->
     <div id="chipModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeChipModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
             <h3 class="text-base font-black text-center mb-4 tracking-tight">Create Quick Chip</h3>
             <div class="space-y-3 mb-5">
-                <input type="text" id="newChipEmoji" placeholder="Emoji (e.g. ☕, 🚇, 🍔)" maxlength="2" class="glass-pill w-full text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
-                <input type="text" id="newChipLabel" placeholder="Label (e.g. Chai, Bus)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
-                <input type="number" id="newChipAmount" placeholder="Default Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
+                <input type="text" id="newChipEmoji" placeholder="Emoji (e.g. ☕)" maxlength="2" class="glass-pill w-full text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
+                <input type="text" id="newChipLabel" placeholder="Label (e.g. Chai)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+                <input type="number" id="newChipAmount" placeholder="Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="closeChipModal()" class="spring-press flex-1 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-bold text-sm">Cancel</button>
@@ -234,7 +223,133 @@
         </div>
     </div>
 
+    <!-- EXPORT MODAL -->
+    <div id="exportModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onclick="closeExportModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
+            <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+            <h3 class="text-lg font-black text-center mb-6 tracking-tight text-white">Export Format</h3>
+            
+            <div class="space-y-3">
+                <button onclick="exportExcel()" class="spring-press w-full glass-card border border-emerald-500/30 bg-emerald-900/20 p-4 rounded-2xl flex items-center justify-between text-left">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📊</span>
+                        <div>
+                            <p class="font-bold text-emerald-400">Excel Spreadsheet (.csv)</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Edit in Excel or Google Sheets</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <button onclick="exportPDF()" class="spring-press w-full glass-card border border-rose-500/30 bg-rose-900/20 p-4 rounded-2xl flex items-center justify-between text-left">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📄</span>
+                        <div>
+                            <p class="font-bold text-rose-400">Printable PDF Report</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Clean summary document</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <button onclick="exportJSONBackup()" class="spring-press w-full glass-card border border-blue-500/30 bg-blue-900/20 p-4 rounded-2xl flex items-center justify-between text-left">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📁</span>
+                        <div>
+                            <p class="font-bold text-blue-400">App Backup Data (.wallet)</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Use this to restore your app</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            
+            <button type="button" onclick="closeExportModal()" class="spring-press w-full bg-slate-800 text-slate-300 mt-5 py-4 rounded-2xl font-black text-sm">Cancel</button>
+        </div>
+    </div>
+
     <script>
+        // ==========================================
+        // INDEXED_DB ARCHITECTURE
+        // ==========================================
+        const DB_NAME = 'WalletProDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'transactions';
+        let db;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    let database = e.target.result;
+                    if (!database.objectStoreNames.contains(STORE_NAME)) {
+                        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        function dbGetAll() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result.sort((a, b) => b.id - a.id));
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function dbPut(item) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(item);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function dbDelete(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function dbClearAll() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        // ==========================================
+        // MIGRATION SCRIPT (LocalStorage -> IndexedDB)
+        // ==========================================
+        async function migrateIfNeeded() {
+            const oldData = localStorage.getItem('wallet_history');
+            if (oldData) {
+                try {
+                    const parsed = JSON.parse(oldData);
+                    for (const item of parsed) { await dbPut(item); }
+                    localStorage.removeItem('wallet_history');
+                    alert("Database upgraded to IndexedDB successfully!");
+                } catch (e) { console.error("Migration failed", e); }
+            }
+        }
+
+        // ==========================================
+        // APP LOGIC
+        // ==========================================
         let currentFlow = { type: 'OUT', id: null, isEditing: false, category: 'Food' };
         const formatCurrency = (num) => new Intl.NumberFormat('en-IN').format(num);
 
@@ -272,7 +387,6 @@
                     }, 650);
                 };
                 btn.onmouseup = btn.ontouchend = () => clearTimeout(timer);
-
                 container.appendChild(btn);
             });
 
@@ -284,23 +398,15 @@
             container.appendChild(addBtn);
         }
 
-        function openChipModal() {
-            document.getElementById('chipModal').classList.remove('hidden');
-        }
-        function closeChipModal() {
-            document.getElementById('chipModal').classList.add('hidden');
-        }
+        function openChipModal() { document.getElementById('chipModal').classList.remove('hidden'); }
+        function closeChipModal() { document.getElementById('chipModal').classList.add('hidden'); }
 
         function saveCustomChip() {
             const emoji = document.getElementById('newChipEmoji').value.trim() || '💳';
             const label = document.getElementById('newChipLabel').value.trim() || 'Item';
             const amount = parseInt(document.getElementById('newChipAmount').value, 10) || 0;
 
-            if (amount <= 0) {
-                alert('Enter a valid amount');
-                return;
-            }
-
+            if (amount <= 0) return alert('Enter a valid amount');
             const chips = getCustomChips();
             chips.push({ emoji, label, amount, category: 'Food' });
             localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
@@ -312,21 +418,15 @@
             renderChips();
         }
 
-        function quickExpense(amount, reason, category) {
-            let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+        async function quickExpense(amount, reason, category) {
             const now = new Date();
-            historyData.unshift({
-                id: Date.now(),
-                type: 'OUT',
-                amount: Number(amount),
-                reason: reason,
-                category: category || 'Food',
+            const tx = {
+                id: Date.now(), type: 'OUT', amount: Number(amount), reason: reason, category: category || 'Food',
                 time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
                 date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-                timestamp: now.getTime(),
-                edited: false
-            });
-            localStorage.setItem('wallet_history', JSON.stringify(historyData));
+                timestamp: now.getTime(), edited: false
+            };
+            await dbPut(tx);
             render();
         }
 
@@ -337,14 +437,12 @@
             const navAnalytics = document.getElementById('navAnalytics');
 
             if (tab === 'tx') {
-                txView.classList.remove('hide-tab');
-                analyticsView.classList.add('hide-tab');
+                txView.classList.remove('hide-tab'); analyticsView.classList.add('hide-tab');
                 navTx.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
                 navAnalytics.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
                 render();
             } else {
-                txView.classList.add('hide-tab');
-                analyticsView.classList.remove('hide-tab');
+                txView.classList.add('hide-tab'); analyticsView.classList.remove('hide-tab');
                 navTx.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
                 navAnalytics.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
                 renderAnalytics();
@@ -354,11 +452,8 @@
         function setCategory(cat) {
             currentFlow.category = cat;
             document.querySelectorAll('.cat-pill').forEach(btn => {
-                if (btn.innerText === cat) {
-                    btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-blue-500 bg-blue-600 text-white spring-press';
-                } else {
-                    btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press';
-                }
+                if (btn.innerText === cat) btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-blue-500 bg-blue-600 text-white spring-press';
+                else btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press';
             });
         }
 
@@ -377,8 +472,8 @@
             setTimeout(() => document.getElementById('numAmount').focus(), 150);
         }
 
-        function openEdit(id) {
-            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+        async function openEdit(id) {
+            const historyData = await dbGetAll();
             const item = historyData.find(t => t.id === id);
             if (!item) return;
 
@@ -393,126 +488,88 @@
             document.getElementById('deleteBtn').classList.remove('hidden');
 
             document.getElementById('flowModal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('reasonInput').focus(), 150);
+            setTimeout(() => document.getElementById('numAmount').focus(), 150);
         }
 
-        function closeModal() {
-            document.getElementById('flowModal').classList.add('hidden');
-        }
+        function closeModal() { document.getElementById('flowModal').classList.add('hidden'); }
 
-        function saveTransaction() {
+        async function saveTransaction() {
             const amountVal = parseFloat(document.getElementById('numAmount').value);
-            if (!amountVal || isNaN(amountVal) || amountVal <= 0) {
-                alert("Please enter a valid amount");
-                return;
-            }
+            if (!amountVal || isNaN(amountVal) || amountVal <= 0) return alert("Please enter a valid amount");
 
             const reason = document.getElementById('reasonInput').value.trim() || 'Other';
-            let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
             const now = new Date();
+            let txToSave;
 
             if (currentFlow.isEditing) {
-                historyData = historyData.map(t => (t.id === currentFlow.id ? { 
-                    ...t, 
-                    amount: amountVal, 
-                    reason: reason, 
-                    category: currentFlow.category, 
-                    edited: true 
-                } : t));
+                const historyData = await dbGetAll();
+                const existing = historyData.find(t => t.id === currentFlow.id);
+                txToSave = { ...existing, amount: amountVal, reason: reason, category: currentFlow.category, edited: true };
             } else {
-                historyData.unshift({
-                    id: Date.now(), 
-                    type: currentFlow.type, 
-                    amount: amountVal, 
-                    reason: reason,
-                    category: currentFlow.category,
+                txToSave = {
+                    id: Date.now(), type: currentFlow.type, amount: amountVal, reason: reason, category: currentFlow.category,
                     time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
                     date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-                    timestamp: now.getTime(),
-                    edited: false
-                });
+                    timestamp: now.getTime(), edited: false
+                };
             }
 
-            localStorage.setItem('wallet_history', JSON.stringify(historyData));
+            await dbPut(txToSave);
             closeModal(); 
             render();
         }
 
-        function deleteTransaction() {
-            if (confirm("Delete this entry?")) {
-                let historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
-                localStorage.setItem('wallet_history', JSON.stringify(historyData.filter(t => t.id !== currentFlow.id)));
-                closeModal(); 
-                render();
-            }
+        async function deleteTransaction() {
+            if (confirm("Delete this entry?")) { await dbDelete(currentFlow.id); closeModal(); render(); }
         }
 
-        // Reset All Data
-        function resetAll() {
-            if (confirm("Clear all transactions and reset balance to ₹0?")) {
-                localStorage.removeItem('wallet_history');
-                render();
-            }
+        async function resetAll() {
+            if (confirm("Clear all transactions and reset balance to ₹0?")) { await dbClearAll(); render(); }
         }
 
         function editDailyBudget() {
             const current = localStorage.getItem('wallet_daily_limit') || 500;
             const updated = prompt("Set your target daily spend limit (₹):", current);
             if (updated !== null && !isNaN(updated) && Number(updated) > 0) {
-                localStorage.setItem('wallet_daily_limit', Number(updated));
-                render();
+                localStorage.setItem('wallet_daily_limit', Number(updated)); render();
             }
         }
 
-        function render() {
-            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+        async function render() {
+            const historyData = await dbGetAll();
             const search = (document.getElementById('searchInput').value || '').toLowerCase();
             const list = document.getElementById('historyList');
-            let totalBalance = 0;
-            let totalIncome = 0;
-            let todaySpent = 0;
+            let totalBalance = 0; let totalIncome = 0; let todaySpent = 0;
             const todayStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 
             list.innerHTML = '';
 
             historyData.forEach(tx => {
                 const amt = Number(tx.amount) || 0;
-                if (tx.type === 'IN') {
-                    totalBalance += amt;
-                    totalIncome += amt;
-                } else {
-                    totalBalance -= amt;
-                    if (tx.date === todayStr) todaySpent += amt;
-                }
+                if (tx.type === 'IN') { totalBalance += amt; totalIncome += amt; } 
+                else { totalBalance -= amt; if (tx.date === todayStr) todaySpent += amt; }
             });
 
-            // 1. Wallet Retained Bar
             const retainedBar = document.getElementById('retainedBar');
             const retainedLabel = document.getElementById('retainedPctLabel');
             if (totalIncome > 0) {
                 const retainedPct = Math.max(0, Math.min(Math.round((totalBalance / totalIncome) * 100), 100));
                 retainedBar.style.width = `${retainedPct}%`;
                 retainedLabel.innerText = `${retainedPct}% remaining`;
-                retainedBar.className = retainedPct <= 20 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' :
-                                        retainedPct <= 50 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 
-                                                            'bg-sky-400 h-full rounded-full transition-all duration-500';
+                retainedBar.className = retainedPct <= 20 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' : retainedPct <= 50 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 'bg-sky-400 h-full rounded-full transition-all duration-500';
             } else {
                 retainedBar.style.width = totalBalance > 0 ? '100%' : '0%';
                 retainedLabel.innerText = totalBalance > 0 ? 'Positive' : '0%';
             }
 
-            // 2. Daily Limit Gauge
             const dailyLimit = parseInt(localStorage.getItem('wallet_daily_limit') || 500, 10);
             document.getElementById('dailyLimitLabel').innerText = formatCurrency(dailyLimit);
             document.getElementById('dailySpentLabel').innerText = `₹${formatCurrency(todaySpent)}`;
             const budgetPct = Math.min(Math.round((todaySpent / dailyLimit) * 100), 100);
             const budgetBar = document.getElementById('dailyBudgetBar');
             budgetBar.style.width = `${budgetPct}%`;
-            budgetBar.className = budgetPct >= 90 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' :
-                                  budgetPct >= 65 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 
-                                                    'bg-emerald-400 h-full rounded-full transition-all duration-500';
+            budgetBar.className = budgetPct >= 90 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' : budgetPct >= 65 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 'bg-emerald-400 h-full rounded-full transition-all duration-500';
 
-            // Filter & Render List
             historyData.filter(tx => (tx.reason || '').toLowerCase().includes(search)).forEach(tx => {
                 const item = document.createElement('div');
                 item.className = 'glass-card p-4 rounded-3xl flex justify-between items-center spring-press cursor-pointer';
@@ -534,27 +591,19 @@
             document.getElementById('totalBalance').className = `text-4xl font-black italic tracking-tight ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
         }
 
-        function renderAnalytics() {
-            const historyData = JSON.parse(localStorage.getItem('wallet_history') || '[]');
+        async function renderAnalytics() {
+            const historyData = await dbGetAll();
             const chart = document.getElementById('weeklyChart');
             const catList = document.getElementById('categoryList');
-            chart.innerHTML = '';
-            catList.innerHTML = '';
+            chart.innerHTML = ''; catList.innerHTML = '';
 
             const days = [];
             for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                days.push({
-                    dateKey: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-                    dayName: d.toLocaleDateString('en-IN', { weekday: 'narrow' }),
-                    total: 0
-                });
+                const d = new Date(); d.setDate(d.getDate() - i);
+                days.push({ dateKey: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), dayName: d.toLocaleDateString('en-IN', { weekday: 'narrow' }), total: 0 });
             }
 
-            const categories = {};
-            let totalOut = 0;
-            let sevenDaySpend = 0;
+            const categories = {}; let totalOut = 0; let sevenDaySpend = 0;
 
             historyData.forEach(tx => {
                 const amt = Number(tx.amount) || 0;
@@ -564,10 +613,7 @@
                     categories[cat] = (categories[cat] || 0) + amt;
 
                     const matchDay = days.find(d => d.dateKey === tx.date);
-                    if (matchDay) {
-                        matchDay.total += amt;
-                        sevenDaySpend += amt;
-                    }
+                    if (matchDay) { matchDay.total += amt; sevenDaySpend += amt; }
                 }
             });
 
@@ -576,80 +622,157 @@
             const maxVal = Math.max(...days.map(d => d.total), 100);
             days.forEach(d => {
                 const barHeight = Math.round((d.total / maxVal) * 90);
-                const col = document.createElement('div');
-                col.className = 'flex-1 flex flex-col items-center gap-1.5 h-full justify-end';
-                col.innerHTML = `
-                    <span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>
-                    <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
-                    <span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>
-                `;
-                chart.appendChild(col);
+                chart.innerHTML += `
+                    <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                        <span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>
+                        <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
+                        <span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>
+                    </div>`;
             });
 
             if (Object.keys(categories).length === 0) {
-                catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending records yet.</p>`;
-                return;
+                catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending records yet.</p>`; return;
             }
 
             Object.entries(categories).forEach(([name, amt]) => {
                 const pct = Math.round((amt / (totalOut || 1)) * 100);
-                const row = document.createElement('div');
-                row.innerHTML = `
-                    <div class="flex justify-between text-xs font-bold mb-1.5">
-                        <span>${name}</span>
-                        <span class="text-slate-400">₹${formatCurrency(amt)} (${pct}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-white/5">
-                        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: ${pct}%"></div>
-                    </div>
-                `;
-                catList.appendChild(row);
+                catList.innerHTML += `
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1.5">
+                            <span>${name}</span>
+                            <span class="text-slate-400">₹${formatCurrency(amt)} (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-white/5">
+                            <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>`;
             });
         }
 
-        function exportBackupFile() {
-            const data = localStorage.getItem('wallet_history') || '[]';
-            const blob = new Blob([data], { type: 'application/json' });
+        // ==========================================
+        // EXPORT LOGIC
+        // ==========================================
+        function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
+        function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+        async function exportJSONBackup() {
+            const data = await dbGetAll();
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `wallet-backup-${new Date().toISOString().slice(0, 10)}.wallet`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            closeExportModal();
         }
 
+        async function exportExcel() {
+            const data = await dbGetAll();
+            let csv = "Date,Time,Type,Category,Note,Amount\n";
+            
+            data.forEach(row => {
+                let note = `"${(row.reason || '').replace(/"/g, '""')}"`;
+                let type = row.type === 'IN' ? 'Income' : 'Expense';
+                csv += `${row.date},${row.time},${type},${row.category},${note},${row.amount}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Wallet-Expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            closeExportModal();
+        }
+
+        async function exportPDF() {
+            const data = await dbGetAll();
+            let html = `
+                <html>
+                <head>
+                    <title>Wallet Pro - Expense Report</title>
+                    <style>
+                        body { font-family: -apple-system, sans-serif; color: #333; padding: 20px; }
+                        h2 { text-align: center; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+                        th { background: #f8fafc; font-weight: bold; }
+                        .income { color: #10b981; font-weight: bold; }
+                        .expense { color: #ef4444; }
+                        .total-row { font-size: 18px; font-weight: bold; text-align: right; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Wallet Pro - Financial Report</h2>
+                    <table>
+                        <tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th></tr>
+            `;
+            
+            let totalSpent = 0;
+            data.forEach(row => {
+                const isInc = row.type === 'IN';
+                if(!isInc) totalSpent += Number(row.amount);
+                const colorClass = isInc ? 'income' : 'expense';
+                const sign = isInc ? '+' : '-';
+                
+                html += `<tr>
+                    <td>${row.date}</td>
+                    <td>${row.category}</td>
+                    <td>${row.reason || '-'}</td>
+                    <td class="${colorClass}">${sign}₹${row.amount}</td>
+                </tr>`;
+            });
+            
+            html += `
+                    </table>
+                    <div class="total-row">Total Spent: ₹${totalSpent}</div>
+                    <script>
+                        window.onload = function() { window.print(); }
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            iframe.contentDocument.write(html);
+            iframe.contentDocument.close();
+            
+            setTimeout(() => { document.body.removeChild(iframe); closeExportModal(); }, 3000);
+        }
+
+        // ==========================================
+        // IMPORT LOGIC
+        // ==========================================
         function importBackupFile(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (Array.isArray(parsed)) {
-                        localStorage.setItem('wallet_history', JSON.stringify(parsed));
-                        alert("Backup restored!");
+                        await dbClearAll();
+                        for(const item of parsed) { await dbPut(item); }
+                        alert("Backup restored into IndexedDB!");
                         render();
-                    } else {
-                        alert("Invalid backup file format.");
-                    }
-                } catch (err) {
-                    alert("Error parsing file.");
-                }
+                    } else alert("Invalid backup file format.");
+                } catch (err) { alert("Error parsing file."); }
             };
-            reader.readAsText(file);
-            event.target.value = '';
+            reader.readAsText(file); event.target.value = '';
         }
 
-        renderChips();
-        render();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
-            });
-        }
+        // Initialize App flow
+        window.onload = async () => {
+            try {
+                await initDB();
+                await migrateIfNeeded();
+                renderChips();
+                render();
+            } catch(e) { console.error("Database Error:", e); alert("Failed to initialize database."); }
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
+        };
     </script>
 </body>
 </html>
