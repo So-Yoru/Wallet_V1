@@ -206,16 +206,34 @@
         </div>
     </div>
 
-    <!-- NEW CHIP MODAL -->
+    <!-- NEW FIXED CHIP MODAL -->
     <div id="chipModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeChipModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
-            <h3 class="text-base font-black text-center mb-4 tracking-tight">Create Quick Chip</h3>
-            <div class="space-y-3 mb-5">
-                <input type="text" id="newChipEmoji" placeholder="Emoji (e.g. ☕)" maxlength="2" class="glass-pill w-full text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
-                <input type="text" id="newChipLabel" placeholder="Label (e.g. Chai)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+            <h3 class="text-base font-black text-center mb-4 tracking-tight text-white">Create Quick Chip</h3>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Emoji & Label Row -->
+                <div class="flex gap-2">
+                    <input type="text" id="newChipEmoji" placeholder="☕" maxlength="2" class="glass-pill w-16 text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
+                    <input type="text" id="newChipLabel" placeholder="Label (e.g. Metro, Chai)" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+                </div>
+                
+                <!-- Amount -->
                 <input type="number" id="newChipAmount" placeholder="Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
+                
+                <!-- Category Selection -->
+                <div>
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Chip Category</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="setChipCategory('Food')" class="chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-blue-500 bg-blue-600 text-white spring-press">Food</button>
+                        <button type="button" onclick="setChipCategory('Travel')" class="chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Travel</button>
+                        <button type="button" onclick="setChipCategory('Bills')" class="chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Bills</button>
+                        <button type="button" onclick="setChipCategory('Other')" class="chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Other</button>
+                    </div>
+                </div>
             </div>
+            
             <div class="flex gap-2">
                 <button type="button" onclick="closeChipModal()" class="spring-press flex-1 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-bold text-sm">Cancel</button>
                 <button type="button" onclick="saveCustomChip()" class="spring-press flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm">Save Chip</button>
@@ -332,9 +350,6 @@
             });
         }
 
-        // ==========================================
-        // MIGRATION SCRIPT (LocalStorage -> IndexedDB)
-        // ==========================================
         async function migrateIfNeeded() {
             const oldData = localStorage.getItem('wallet_history');
             if (oldData) {
@@ -342,7 +357,6 @@
                     const parsed = JSON.parse(oldData);
                     for (const item of parsed) { await dbPut(item); }
                     localStorage.removeItem('wallet_history');
-                    alert("Database upgraded to IndexedDB successfully!");
                 } catch (e) { console.error("Migration failed", e); }
             }
         }
@@ -351,6 +365,7 @@
         // APP LOGIC
         // ==========================================
         let currentFlow = { type: 'OUT', id: null, isEditing: false, category: 'Food' };
+        let currentChipCategory = 'Food';
         const formatCurrency = (num) => new Intl.NumberFormat('en-IN').format(num);
 
         const DEFAULT_CHIPS = [
@@ -386,7 +401,11 @@
                         }
                     }, 650);
                 };
+                
+                // Fix for the scroll bug: cancel the long-press if the user slides their finger
+                btn.ontouchmove = () => clearTimeout(timer);
                 btn.onmouseup = btn.ontouchend = () => clearTimeout(timer);
+                
                 container.appendChild(btn);
             });
 
@@ -398,22 +417,36 @@
             container.appendChild(addBtn);
         }
 
-        function openChipModal() { document.getElementById('chipModal').classList.remove('hidden'); }
+        function setChipCategory(cat) {
+            currentChipCategory = cat;
+            document.querySelectorAll('.chip-cat-pill').forEach(btn => {
+                if (btn.innerText === cat) btn.className = 'chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-blue-500 bg-blue-600 text-white spring-press';
+                else btn.className = 'chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press';
+            });
+        }
+
+        function openChipModal() { 
+            document.getElementById('newChipEmoji').value = '';
+            document.getElementById('newChipLabel').value = '';
+            document.getElementById('newChipAmount').value = '';
+            setChipCategory('Food');
+            document.getElementById('chipModal').classList.remove('hidden'); 
+        }
+        
         function closeChipModal() { document.getElementById('chipModal').classList.add('hidden'); }
 
         function saveCustomChip() {
             const emoji = document.getElementById('newChipEmoji').value.trim() || '💳';
-            const label = document.getElementById('newChipLabel').value.trim() || 'Item';
-            const amount = parseInt(document.getElementById('newChipAmount').value, 10) || 0;
+            const label = document.getElementById('newChipLabel').value.trim();
+            const amount = parseInt(document.getElementById('newChipAmount').value, 10);
 
-            if (amount <= 0) return alert('Enter a valid amount');
+            if (!label) return alert('Please enter a name for this chip (e.g., Metro, Snack)');
+            if (!amount || amount <= 0) return alert('Please enter a valid amount');
+
             const chips = getCustomChips();
-            chips.push({ emoji, label, amount, category: 'Food' });
+            chips.push({ emoji, label, amount, category: currentChipCategory });
             localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
             
-            document.getElementById('newChipEmoji').value = '';
-            document.getElementById('newChipLabel').value = '';
-            document.getElementById('newChipAmount').value = '';
             closeChipModal();
             renderChips();
         }
