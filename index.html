@@ -100,7 +100,6 @@
             </div>
         </div>
 
-        <!-- Quick Chips -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-2.5 px-1">
                 <span class="text-[11px] text-slate-400 uppercase tracking-widest font-black">Quick Add</span>
@@ -131,17 +130,27 @@
 
     <!-- TAB 2: ANALYTICS -->
     <main id="tabAnalytics" class="hide-tab">
-        <div class="mt-4 mb-6">
-            <h2 class="text-2xl font-black tracking-tight">Spending Analytics</h2>
-            <p class="text-slate-400 text-xs mt-1">Daily trends and category distribution</p>
+        <div class="mt-4 mb-6 flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-black tracking-tight">Analytics</h2>
+                <p class="text-slate-400 text-xs mt-1">Review your spending habits</p>
+            </div>
         </div>
 
-        <div class="glass-card p-6 rounded-[2.5rem] mb-6">
+        <!-- NEW: SMART TIME FILTER -->
+        <div class="glass-pill p-1.5 rounded-2xl flex justify-between mb-6 shadow-lg shadow-black/20">
+            <button onclick="setAnalyticsFilter('7D')" id="btnFilter7D" class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-slate-700/80 text-white shadow-md transition-all">7 Days</button>
+            <button onclick="setAnalyticsFilter('30D')" id="btnFilter30D" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition-all">30 Days</button>
+            <button onclick="setAnalyticsFilter('ALL')" id="btnFilterALL" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition-all">All Time</button>
+        </div>
+
+        <div class="glass-card p-6 rounded-[2.5rem] mb-6 relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex justify-between items-center mb-4">
-                <span class="text-xs uppercase tracking-widest font-black text-slate-400">Past 7 Days</span>
-                <span id="sevenDayTotal" class="text-xs font-bold text-rose-400">₹0</span>
+                <span id="chartTitle" class="text-xs uppercase tracking-widest font-black text-slate-400">Past 7 Days</span>
+                <span id="chartTotal" class="text-xs font-bold text-rose-400">₹0</span>
             </div>
-            <div id="weeklyChart" class="h-36 flex items-end justify-between gap-2 pt-6"></div>
+            <div id="dynamicChart" class="h-36 flex items-end justify-between gap-1 pt-6"></div>
         </div>
 
         <div class="glass-card p-6 rounded-[2.5rem]">
@@ -213,16 +222,11 @@
             <h3 class="text-base font-black text-center mb-4 tracking-tight text-white">Create Quick Chip</h3>
             
             <div class="space-y-4 mb-6">
-                <!-- Emoji & Label Row -->
                 <div class="flex gap-2">
                     <input type="text" id="newChipEmoji" placeholder="☕" maxlength="2" class="glass-pill w-16 text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
                     <input type="text" id="newChipLabel" placeholder="Label (e.g. Metro, Chai)" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
                 </div>
-                
-                <!-- Amount -->
                 <input type="number" id="newChipAmount" placeholder="Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
-                
-                <!-- Category Selection -->
                 <div>
                     <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Chip Category</p>
                     <div class="grid grid-cols-4 gap-2">
@@ -258,7 +262,6 @@
                         </div>
                     </div>
                 </button>
-                
                 <button onclick="exportPDF()" class="spring-press w-full glass-card border border-rose-500/30 bg-rose-900/20 p-4 rounded-2xl flex items-center justify-between text-left">
                     <div class="flex items-center gap-3">
                         <span class="text-2xl">📄</span>
@@ -268,7 +271,6 @@
                         </div>
                     </div>
                 </button>
-                
                 <button onclick="exportJSONBackup()" class="spring-press w-full glass-card border border-blue-500/30 bg-blue-900/20 p-4 rounded-2xl flex items-center justify-between text-left">
                     <div class="flex items-center gap-3">
                         <span class="text-2xl">📁</span>
@@ -279,7 +281,6 @@
                     </div>
                 </button>
             </div>
-            
             <button type="button" onclick="closeExportModal()" class="spring-press w-full bg-slate-800 text-slate-300 mt-5 py-4 rounded-2xl font-black text-sm">Cancel</button>
         </div>
     </div>
@@ -292,6 +293,7 @@
         const DB_VERSION = 1;
         const STORE_NAME = 'transactions';
         let db;
+        let currentAnalyticsFilter = '7D'; // 7D, 30D, ALL
 
         function initDB() {
             return new Promise((resolve, reject) => {
@@ -302,10 +304,7 @@
                         database.createObjectStore(STORE_NAME, { keyPath: 'id' });
                     }
                 };
-                request.onsuccess = (e) => {
-                    db = e.target.result;
-                    resolve(db);
-                };
+                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
                 request.onerror = (e) => reject(e.target.error);
             });
         }
@@ -401,8 +400,6 @@
                         }
                     }, 650);
                 };
-                
-                // Fix for the scroll bug: cancel the long-press if the user slides their finger
                 btn.ontouchmove = () => clearTimeout(timer);
                 btn.onmouseup = btn.ontouchend = () => clearTimeout(timer);
                 
@@ -440,15 +437,14 @@
             const label = document.getElementById('newChipLabel').value.trim();
             const amount = parseInt(document.getElementById('newChipAmount').value, 10);
 
-            if (!label) return alert('Please enter a name for this chip (e.g., Metro, Snack)');
+            if (!label) return alert('Please enter a name for this chip');
             if (!amount || amount <= 0) return alert('Please enter a valid amount');
 
             const chips = getCustomChips();
             chips.push({ emoji, label, amount, category: currentChipCategory });
             localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
             
-            closeChipModal();
-            renderChips();
+            closeChipModal(); renderChips();
         }
 
         async function quickExpense(amount, reason, category) {
@@ -459,8 +455,7 @@
                 date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
                 timestamp: now.getTime(), edited: false
             };
-            await dbPut(tx);
-            render();
+            await dbPut(tx); render();
         }
 
         function switchTab(tab) {
@@ -547,9 +542,7 @@
                 };
             }
 
-            await dbPut(txToSave);
-            closeModal(); 
-            render();
+            await dbPut(txToSave); closeModal(); render();
         }
 
         async function deleteTransaction() {
@@ -624,47 +617,122 @@
             document.getElementById('totalBalance').className = `text-4xl font-black italic tracking-tight ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
         }
 
+        // ==========================================
+        // SMART ANALYTICS ENGINE
+        // ==========================================
+        function setAnalyticsFilter(f) {
+            currentAnalyticsFilter = f;
+            
+            // Update button UI
+            document.getElementById('btnFilter7D').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === '7D' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
+            document.getElementById('btnFilter30D').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === '30D' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
+            document.getElementById('btnFilterALL').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === 'ALL' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
+            
+            renderAnalytics();
+        }
+
         async function renderAnalytics() {
             const historyData = await dbGetAll();
-            const chart = document.getElementById('weeklyChart');
+            const chart = document.getElementById('dynamicChart');
             const catList = document.getElementById('categoryList');
             chart.innerHTML = ''; catList.innerHTML = '';
 
-            const days = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                days.push({ dateKey: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), dayName: d.toLocaleDateString('en-IN', { weekday: 'narrow' }), total: 0 });
-            }
+            const now = new Date();
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            
+            // Step 1: Filter data based on selection
+            let cutoff = 0;
+            if (currentAnalyticsFilter === '7D') cutoff = todayMidnight - (6 * 24 * 60 * 60 * 1000);
+            if (currentAnalyticsFilter === '30D') cutoff = todayMidnight - (29 * 24 * 60 * 60 * 1000);
+            
+            const filteredTx = currentAnalyticsFilter === 'ALL' ? historyData : historyData.filter(tx => tx.timestamp >= cutoff);
 
-            const categories = {}; let totalOut = 0; let sevenDaySpend = 0;
-
-            historyData.forEach(tx => {
-                const amt = Number(tx.amount) || 0;
+            // Step 2: Calculate Category Totals (Automatically adjusts to filter)
+            const categories = {}; let totalOut = 0;
+            filteredTx.forEach(tx => {
                 if (tx.type === 'OUT') {
+                    const amt = Number(tx.amount);
                     totalOut += amt;
                     const cat = tx.category || 'Other';
                     categories[cat] = (categories[cat] || 0) + amt;
-
-                    const matchDay = days.find(d => d.dateKey === tx.date);
-                    if (matchDay) { matchDay.total += amt; sevenDaySpend += amt; }
                 }
             });
 
-            document.getElementById('sevenDayTotal').innerText = `Total: ₹${formatCurrency(sevenDaySpend)}`;
+            // Update Header
+            document.getElementById('chartTitle').innerText = currentAnalyticsFilter === '7D' ? 'Past 7 Days' : currentAnalyticsFilter === '30D' ? 'Past 30 Days' : 'All Time';
+            document.getElementById('chartTotal').innerText = `Total: ₹${formatCurrency(totalOut)}`;
 
-            const maxVal = Math.max(...days.map(d => d.total), 100);
-            days.forEach(d => {
-                const barHeight = Math.round((d.total / maxVal) * 90);
-                chart.innerHTML += `
-                    <div class="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                        <span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>
-                        <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
-                        <span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>
-                    </div>`;
-            });
+            // Step 3: Render Chart
+            if (currentAnalyticsFilter === '7D' || currentAnalyticsFilter === '30D') {
+                const daysCount = currentAnalyticsFilter === '7D' ? 7 : 30;
+                const days = [];
+                for (let i = daysCount - 1; i >= 0; i--) {
+                    const d = new Date(todayMidnight - (i * 24 * 60 * 60 * 1000));
+                    days.push({ ts: d.getTime(), dayName: currentAnalyticsFilter === '7D' ? d.toLocaleDateString('en-IN', { weekday: 'narrow' }) : d.getDate(), total: 0 });
+                }
+                
+                filteredTx.forEach(tx => {
+                    if (tx.type === 'OUT') {
+                        const txDate = new Date(tx.timestamp).setHours(0,0,0,0);
+                        const matchDay = days.find(d => d.ts === txDate);
+                        if (matchDay) matchDay.total += Number(tx.amount);
+                    }
+                });
+                
+                const maxVal = Math.max(...days.map(d => d.total), 100);
+                days.forEach((d, idx) => {
+                    const barHeight = Math.round((d.total / maxVal) * 90);
+                    const radius = currentAnalyticsFilter === '7D' ? 'rounded-t-md' : 'rounded-t-sm';
+                    
+                    let labelText = ''; let amtText = '';
+                    if (currentAnalyticsFilter === '7D') {
+                        labelText = `<span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>`;
+                        amtText = `<span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>`;
+                    } else {
+                        // 30 Days: Only show numbers on ends and middle to avoid crowding
+                        const isLabel = idx === 0 || idx === 14 || idx === 29;
+                        labelText = isLabel ? `<span class="text-[9px] text-slate-500 font-bold mt-1">${d.dayName}</span>` : `<span class="text-[9px] text-transparent mt-1">-</span>`;
+                    }
+                    
+                    chart.innerHTML += `
+                        <div class="flex-1 flex flex-col items-center justify-end h-full">
+                            ${amtText}
+                            <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 ${radius} transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px; opacity: ${d.total > 0 ? '1' : '0.3'};"></div>
+                            ${labelText}
+                        </div>`;
+                });
+            } else {
+                // ALL TIME: Render By Month
+                const monthsMap = {};
+                filteredTx.forEach(tx => {
+                    if (tx.type === 'OUT') {
+                        const d = new Date(tx.timestamp);
+                        const mKey = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+                        if (!monthsMap[mKey]) monthsMap[mKey] = { label: d.toLocaleDateString('en-IN', { month: 'short' }), total: 0, ts: new Date(d.getFullYear(), d.getMonth(), 1).getTime() };
+                        monthsMap[mKey].total += Number(tx.amount);
+                    }
+                });
+                
+                const monthsArr = Object.values(monthsMap).sort((a, b) => a.ts - b.ts);
+                if (monthsArr.length === 0) {
+                    chart.innerHTML = `<div class="w-full text-center text-slate-500 text-xs pb-4">No spending data yet.</div>`;
+                } else {
+                    const maxVal = Math.max(...monthsArr.map(m => m.total), 100);
+                    monthsArr.forEach(m => {
+                        const barHeight = Math.round((m.total / maxVal) * 90);
+                        chart.innerHTML += `
+                            <div class="flex-1 flex flex-col items-center justify-end h-full">
+                                <span class="text-[9px] text-slate-400 font-bold">${m.total ? '₹' + formatCurrency(m.total) : ''}</span>
+                                <div class="w-full max-w-[35px] bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
+                                <span class="text-[10px] text-slate-400 font-bold mt-1">${m.label}</span>
+                            </div>`;
+                    });
+                }
+            }
 
+            // Step 4: Render Categories (Dynamically calculated based on the selected timeframe)
             if (Object.keys(categories).length === 0) {
-                catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending records yet.</p>`; return;
+                catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending in this period.</p>`; return;
             }
 
             Object.entries(categories).forEach(([name, amt]) => {
@@ -692,8 +760,7 @@
             const data = await dbGetAll();
             const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+            const a = document.createElement('a'); a.href = url;
             a.download = `wallet-backup-${new Date().toISOString().slice(0, 10)}.wallet`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             closeExportModal();
@@ -702,17 +769,14 @@
         async function exportExcel() {
             const data = await dbGetAll();
             let csv = "Date,Time,Type,Category,Note,Amount\n";
-            
             data.forEach(row => {
                 let note = `"${(row.reason || '').replace(/"/g, '""')}"`;
                 let type = row.type === 'IN' ? 'Income' : 'Expense';
                 csv += `${row.date},${row.time},${type},${row.category},${note},${row.amount}\n`;
             });
-
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+            const a = document.createElement('a'); a.href = url;
             a.download = `Wallet-Expenses-${new Date().toISOString().slice(0, 10)}.csv`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             closeExportModal();
@@ -721,63 +785,31 @@
         async function exportPDF() {
             const data = await dbGetAll();
             let html = `
-                <html>
-                <head>
-                    <title>Wallet Pro - Expense Report</title>
-                    <style>
-                        body { font-family: -apple-system, sans-serif; color: #333; padding: 20px; }
-                        h2 { text-align: center; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-                        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
-                        th { background: #f8fafc; font-weight: bold; }
-                        .income { color: #10b981; font-weight: bold; }
-                        .expense { color: #ef4444; }
-                        .total-row { font-size: 18px; font-weight: bold; text-align: right; margin-top: 20px; }
-                    </style>
-                </head>
-                <body>
-                    <h2>Wallet Pro - Financial Report</h2>
-                    <table>
-                        <tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th></tr>
+                <html><head><title>Wallet Pro Report</title>
+                <style>
+                    body { font-family: sans-serif; padding: 20px; }
+                    h2 { text-align: center; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+                    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+                    th { background: #f4f4f4; }
+                    .in { color: green; } .out { color: red; }
+                    .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; }
+                </style></head><body>
+                <h2>Expense Report</h2>
+                <table><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th></tr>
             `;
-            
             let totalSpent = 0;
             data.forEach(row => {
-                const isInc = row.type === 'IN';
-                if(!isInc) totalSpent += Number(row.amount);
-                const colorClass = isInc ? 'income' : 'expense';
-                const sign = isInc ? '+' : '-';
-                
-                html += `<tr>
-                    <td>${row.date}</td>
-                    <td>${row.category}</td>
-                    <td>${row.reason || '-'}</td>
-                    <td class="${colorClass}">${sign}₹${row.amount}</td>
-                </tr>`;
+                if(row.type === 'OUT') totalSpent += Number(row.amount);
+                html += `<tr><td>${row.date}</td><td>${row.category}</td><td>${row.reason || '-'}</td><td class="${row.type === 'IN'?'in':'out'}">₹${row.amount}</td></tr>`;
             });
-            
-            html += `
-                    </table>
-                    <div class="total-row">Total Spent: ₹${totalSpent}</div>
-                    <script>
-                        window.onload = function() { window.print(); }
-                    <\/script>
-                </body>
-                </html>
-            `;
-
+            html += `</table><div class="total">Total Spent: ₹${totalSpent}</div><script>window.onload=function(){window.print();}<\/script></body></html>`;
             const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-            iframe.contentDocument.write(html);
-            iframe.contentDocument.close();
-            
+            iframe.style.display = 'none'; document.body.appendChild(iframe);
+            iframe.contentDocument.write(html); iframe.contentDocument.close();
             setTimeout(() => { document.body.removeChild(iframe); closeExportModal(); }, 3000);
         }
 
-        // ==========================================
-        // IMPORT LOGIC
-        // ==========================================
         function importBackupFile(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -788,21 +820,17 @@
                     if (Array.isArray(parsed)) {
                         await dbClearAll();
                         for(const item of parsed) { await dbPut(item); }
-                        alert("Backup restored into IndexedDB!");
-                        render();
-                    } else alert("Invalid backup file format.");
+                        alert("Backup restored into IndexedDB!"); render();
+                    } else alert("Invalid backup format.");
                 } catch (err) { alert("Error parsing file."); }
             };
             reader.readAsText(file); event.target.value = '';
         }
 
-        // Initialize App flow
         window.onload = async () => {
             try {
-                await initDB();
-                await migrateIfNeeded();
-                renderChips();
-                render();
+                await initDB(); await migrateIfNeeded();
+                renderChips(); render();
             } catch(e) { console.error("Database Error:", e); alert("Failed to initialize database."); }
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
         };
