@@ -13,6 +13,7 @@
 
     <title>Wallet Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
@@ -26,6 +27,7 @@
             overflow-x: hidden; 
             -webkit-tap-highlight-color: transparent;
             min-height: 100vh;
+            touch-action: pan-y;
         }
 
         .glass-card { 
@@ -63,7 +65,12 @@
         <div class="glass-card p-6 rounded-[2.5rem] mt-3 mb-4 relative overflow-hidden">
             <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
             <div class="flex justify-between items-start mb-2">
-                <span class="text-[11px] uppercase tracking-widest font-black text-slate-400">Total Balance</span>
+                <div class="flex flex-col items-start">
+                    <span class="text-[11px] uppercase tracking-widest font-black text-slate-400">Total Balance</span>
+                    <button id="cloudStatusBtn" onclick="openAuthModal()" class="spring-press mt-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span>☁️ Tap to Sign In</span>
+                    </button>
+                </div>
                 <div class="flex gap-1.5">
                     <button onclick="openExportModal()" class="spring-press text-[10px] text-slate-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40">EXPORT</button>
                     <label class="spring-press text-[10px] text-sky-400 font-bold border border-slate-700/60 px-2.5 py-1.5 rounded-xl bg-slate-800/40 cursor-pointer">
@@ -73,7 +80,7 @@
                     <button onclick="resetAll()" class="spring-press text-[10px] text-rose-400 font-bold border border-rose-900/60 px-2.5 py-1.5 rounded-xl bg-rose-950/30">RESET</button>
                 </div>
             </div>
-            <h1 id="totalBalance" class="text-4xl font-black text-white italic tracking-tight">₹0</h1>
+            <h1 id="totalBalance" class="text-4xl font-black text-white italic tracking-tight mt-1">₹0</h1>
 
             <div class="mt-5 pt-4 border-t border-white/10 space-y-3.5">
                 <div>
@@ -119,10 +126,25 @@
             </button>
         </div>
 
-        <div class="relative mb-5">
-            <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions..." 
-                class="w-full bg-slate-800/40 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-400 text-sm placeholder-slate-500 glass-pill">
-            <span class="absolute left-4 top-3.5 text-slate-500 text-sm">🔍</span>
+        <!-- SEARCH BAR + LIVE TOTAL SUMMARY -->
+        <div class="mb-5">
+            <div class="relative">
+                <input type="text" id="searchInput" oninput="render()" placeholder="Search transactions (e.g. Fuel, Food)..." 
+                    class="w-full bg-slate-800/40 border border-white/10 rounded-2xl py-3.5 pl-11 pr-9 outline-none focus:border-blue-400 text-sm placeholder-slate-500 glass-pill">
+                <span class="absolute left-4 top-3.5 text-slate-500 text-sm">🔍</span>
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3.5 top-3.5 text-slate-400 text-xs font-black bg-slate-700/60 w-5 h-5 rounded-full flex items-center justify-center">✕</button>
+            </div>
+            
+            <div id="searchSummary" class="hidden mt-2.5 glass-pill px-4 py-3 rounded-2xl border border-blue-500/30 flex justify-between items-center">
+                <div>
+                    <span id="searchCount" class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">0 matches</span>
+                    <span class="text-xs font-bold text-white">Search Total</span>
+                </div>
+                <div class="text-right">
+                    <span id="searchTotalOut" class="text-sm font-black text-rose-400 block">-₹0</span>
+                    <span id="searchTotalIn" class="text-[10px] font-bold text-emerald-400 hidden">+₹0</span>
+                </div>
+            </div>
         </div>
 
         <div id="historyList" class="space-y-3 pb-8"></div>
@@ -133,11 +155,10 @@
         <div class="mt-4 mb-6 flex justify-between items-end">
             <div>
                 <h2 class="text-2xl font-black tracking-tight">Analytics</h2>
-                <p class="text-slate-400 text-xs mt-1">Review your spending habits</p>
+                <p class="text-slate-400 text-xs mt-1">Swipe right to return to Wallet</p>
             </div>
         </div>
 
-        <!-- NEW: SMART TIME FILTER -->
         <div class="glass-pill p-1.5 rounded-2xl flex justify-between mb-6 shadow-lg shadow-black/20">
             <button onclick="setAnalyticsFilter('7D')" id="btnFilter7D" class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-slate-700/80 text-white shadow-md transition-all">7 Days</button>
             <button onclick="setAnalyticsFilter('30D')" id="btnFilter30D" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition-all">30 Days</button>
@@ -174,6 +195,46 @@
         </nav>
     </div>
 
+    <!-- CLOUD AUTH MODAL (NEW) -->
+    <div id="authModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onclick="closeAuthModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
+            <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+            
+            <!-- Logged Out View -->
+            <div id="authLoggedOutView">
+                <h3 class="text-lg font-black text-center mb-1 tracking-tight text-white">Cloud Backup & Sync</h3>
+                <p class="text-xs text-slate-400 text-center mb-5">Sign in to back up your wallet and sync across phones</p>
+                
+                <div class="space-y-3 mb-5">
+                    <input type="email" id="authEmail" placeholder="Email address" class="glass-pill w-full p-3.5 text-sm rounded-2xl outline-none border border-white/10 text-white">
+                    <input type="password" id="authPassword" placeholder="Password (min 6 chars)" class="glass-pill w-full p-3.5 text-sm rounded-2xl outline-none border border-white/10 text-white">
+                </div>
+                
+                <p id="authErrorMsg" class="hidden text-xs font-bold text-rose-400 text-center mb-4"></p>
+
+                <div class="flex gap-2.5 mb-3">
+                    <button type="button" id="btnSignIn" onclick="handleAuth('LOGIN')" class="spring-press flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-blue-950/50">Sign In</button>
+                    <button type="button" id="btnSignUp" onclick="handleAuth('SIGNUP')" class="spring-press flex-1 bg-emerald-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-emerald-950/50">Create Account</button>
+                </div>
+                <button type="button" onclick="closeAuthModal()" class="spring-press w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-bold text-xs">Continue Offline</button>
+            </div>
+
+            <!-- Logged In View -->
+            <div id="authLoggedInView" class="hidden text-center">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto mb-3 border border-emerald-500/30">☁️</div>
+                <h3 class="text-base font-black text-white">Cloud Sync Active</h3>
+                <p id="authUserEmailDisplay" class="text-xs text-sky-400 font-bold mt-1 mb-6"></p>
+                
+                <div class="space-y-2.5">
+                    <button type="button" onclick="manualCloudSync()" id="btnManualSync" class="spring-press w-full bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm">🔄 Sync Now</button>
+                    <button type="button" onclick="handleSignOut()" class="spring-press w-full bg-rose-950/50 border border-rose-800/50 text-rose-400 py-3.5 rounded-2xl font-bold text-sm">Sign Out</button>
+                    <button type="button" onclick="closeAuthModal()" class="spring-press w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-bold text-xs">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN TRANSACTION MODAL -->
     <div id="flowModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
@@ -195,18 +256,21 @@
             </div>
 
             <div class="mb-5">
-                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2.5">Category</p>
+                <div class="flex justify-center items-center gap-1.5 mb-2.5">
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Category</p>
+                    <span id="autoCatBadge" class="hidden text-[9px] font-black text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/20">✨ Auto</span>
+                </div>
                 <div class="grid grid-cols-4 gap-2">
-                    <button type="button" onclick="setCategory('Food')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Food</button>
-                    <button type="button" onclick="setCategory('Travel')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Travel</button>
-                    <button type="button" onclick="setCategory('Bills')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Bills</button>
-                    <button type="button" onclick="setCategory('Other')" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Other</button>
+                    <button type="button" onclick="setCategory('Food', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Food</button>
+                    <button type="button" onclick="setCategory('Travel', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Travel</button>
+                    <button type="button" onclick="setCategory('Bills', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Bills</button>
+                    <button type="button" onclick="setCategory('Other', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Other</button>
                 </div>
             </div>
 
             <div class="mb-6">
-                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Reason / Note</p>
-                <input type="text" id="reasonInput" placeholder="Chai, Lunch, Metro, etc." class="glass-pill border border-white/10 p-3.5 rounded-2xl text-base w-full outline-none text-center text-white">
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Reason / Note (Auto-categorizes)</p>
+                <input type="text" id="reasonInput" oninput="autoCategorize(this.value)" placeholder="Petrol, Pani puri, Metro, Sim..." class="glass-pill border border-white/10 p-3.5 rounded-2xl text-base w-full outline-none text-center text-white">
             </div>
 
             <button type="button" onclick="saveTransaction()" class="spring-press w-full bg-white text-black py-4 rounded-2xl font-black text-base shadow-xl">
@@ -215,7 +279,7 @@
         </div>
     </div>
 
-    <!-- NEW FIXED CHIP MODAL -->
+    <!-- QUICK CHIP MODAL -->
     <div id="chipModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeChipModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
@@ -224,7 +288,7 @@
             <div class="space-y-4 mb-6">
                 <div class="flex gap-2">
                     <input type="text" id="newChipEmoji" placeholder="☕" maxlength="2" class="glass-pill w-16 text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
-                    <input type="text" id="newChipLabel" placeholder="Label (e.g. Metro, Chai)" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+                    <input type="text" id="newChipLabel" oninput="autoCategorizeChip(this.value)" placeholder="Label (e.g. Metro, Chai)" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
                 </div>
                 <input type="number" id="newChipAmount" placeholder="Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
                 <div>
@@ -287,13 +351,243 @@
 
     <script>
         // ==========================================
-        // INDEXED_DB ARCHITECTURE
+        // 1. SUPABASE CLOUD SYNC & AUTHENTICATION
+        // ==========================================
+        const SUPABASE_URL = "https://jxtakyzlgpqaahvrmpii.supabase.co/rest/v1/"; // <-- PASTE YOUR PROJECT URL HERE
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGFreXpsZ3BxYWFodnJtcGlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyODU0MzYsImV4cCI6MjEwNzg2MTQzNn0.kD5YEj_SI73B5wp7SD12VWXxNciu4ALzoBCV8-yqZ1w"; // <-- PASTE YOUR ANON PUBLIC KEY HERE
+        let supabaseClient = null;
+        let currentUser = null;
+
+        if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+
+        // Strip any extra legacy keys (like lat/lon) so PostgreSQL accepts every row cleanly
+        function cleanForCloud(item, userId) {
+            return {
+                id: Number(item.id),
+                user_id: userId,
+                type: String(item.type || 'OUT'),
+                amount: Number(item.amount || 0),
+                reason: String(item.reason || 'Other'),
+                category: String(item.category || 'Other'),
+                time: String(item.time || ''),
+                date: String(item.date || ''),
+                timestamp: Number(item.timestamp || item.id || Date.now()),
+                edited: Boolean(item.edited)
+            };
+        }
+
+        function updateCloudBadge() {
+            const btn = document.getElementById('cloudStatusBtn');
+            if (!supabaseClient) {
+                btn.innerHTML = `<span>⚡ Local DB (Add Keys)</span>`;
+                btn.className = "spring-press mt-1 text-[10px] font-bold text-slate-400 bg-slate-800/60 border border-white/10 px-2.5 py-0.5 rounded-full flex items-center gap-1";
+            } else if (currentUser) {
+                const shortName = currentUser.email.split('@')[0];
+                btn.innerHTML = `<span>☁️ Synced (${shortName})</span>`;
+                btn.className = "spring-press mt-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1";
+            } else {
+                btn.innerHTML = `<span>☁️ Tap to Sign In</span>`;
+                btn.className = "spring-press mt-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1";
+            }
+        }
+
+        async function checkUserSession() {
+            if (!supabaseClient) { updateCloudBadge(); return; }
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            currentUser = session ? session.user : null;
+            updateCloudBadge();
+            if (currentUser) await syncWithCloud();
+        }
+
+        function openAuthModal() {
+            if (!supabaseClient) {
+                alert("Please paste your SUPABASE_URL and SUPABASE_KEY in the code first!");
+                return;
+            }
+            document.getElementById('authErrorMsg').classList.add('hidden');
+            if (currentUser) {
+                document.getElementById('authLoggedOutView').classList.add('hidden');
+                document.getElementById('authLoggedInView').classList.remove('hidden');
+                document.getElementById('authUserEmailDisplay').innerText = currentUser.email;
+            } else {
+                document.getElementById('authLoggedOutView').classList.remove('hidden');
+                document.getElementById('authLoggedInView').classList.add('hidden');
+            }
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        async function handleAuth(mode) {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            const errEl = document.getElementById('authErrorMsg');
+            errEl.classList.add('hidden');
+
+            if (!email || password.length < 6) {
+                errEl.innerText = "Please enter a valid email and a 6+ character password.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const btn = mode === 'LOGIN' ? document.getElementById('btnSignIn') : document.getElementById('btnSignUp');
+            const origText = btn.innerText;
+            btn.innerText = "Please wait...";
+
+            try {
+                let result;
+                if (mode === 'SIGNUP') {
+                    result = await supabaseClient.auth.signUp({ email, password });
+                } else {
+                    result = await supabaseClient.auth.signInWithPassword({ email, password });
+                }
+
+                if (result.error) {
+                    errEl.innerText = result.error.message;
+                    errEl.classList.remove('hidden');
+                } else if (result.data.user) {
+                    currentUser = result.data.user;
+                    updateCloudBadge();
+                    closeAuthModal();
+                    await syncWithCloud();
+                    alert(mode === 'SIGNUP' ? "Account created! Your wallet is now backed up to the cloud." : "Signed in! Wallet synced with cloud.");
+                }
+            } catch (e) {
+                errEl.innerText = "Network error occurred.";
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.innerText = origText;
+            }
+        }
+
+        async function handleSignOut() {
+            if (!supabaseClient) return;
+            await supabaseClient.auth.signOut();
+            currentUser = null;
+            updateCloudBadge();
+            if (confirm("Signed out of Cloud Sync. Do you also want to clear transactions from this phone's screen? (Your data remains safe in the cloud)")) {
+                await dbClearAll();
+                render();
+            }
+            closeAuthModal();
+        }
+
+        async function manualCloudSync() {
+            const btn = document.getElementById('btnManualSync');
+            btn.innerText = "Syncing...";
+            await syncWithCloud();
+            btn.innerText = "✅ Synced!";
+            setTimeout(() => { btn.innerText = "🔄 Sync Now"; closeAuthModal(); }, 900);
+        }
+
+        async function syncWithCloud() {
+            if (!supabaseClient || !currentUser) return;
+            try {
+                // 1. Push local IndexedDB records up to this user's cloud account
+                const localItems = await dbGetAll();
+                if (localItems.length > 0) {
+                    const payload = localItems.map(item => cleanForCloud(item, currentUser.id));
+                    const { error: pushErr } = await supabaseClient
+                        .from('transactions')
+                        .upsert(payload, { onConflict: 'id,user_id' });
+                    if (pushErr) console.error("Cloud Push Error:", pushErr.message);
+                }
+
+                // 2. Pull this user's cloud records down to local IndexedDB
+                const { data: cloudItems, error: pullErr } = await supabaseClient
+                    .from('transactions')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+
+                if (!pullErr && cloudItems) {
+                    for (const item of cloudItems) {
+                        await dbPut(item, false);
+                    }
+                    render();
+                }
+            } catch (e) { console.error("Cloud sync error:", e); }
+        }
+
+        // ==========================================
+        // 2. SMART AUTO-CATEGORIZATION ENGINE
+        // ==========================================
+        const CATEGORY_KEYWORDS = {
+            Food: ['food', 'lunch', 'dinner', 'breakfast', 'tiffin', 'chai', 'tea', 'coffee', 'koffee', 'coke', 'diet coke', 'pepsi', 'sprite', 'buttermilk', 'lassi', 'water', 'juice', 'sugarcane', 'faluda', 'snack', 'samosa', 'puff', 'frankie', 'roll', 'paneer', 'panner', 'pani puri', 'dahi puri', 'chaat', 'kachori', 'pizza', 'burger', 'fries', 'mcdonalds', 'kfc', 'dominos', 'swiggy', 'zomato', 'bread', 'banana', 'fruit', 'sweet corn', 'biryani', 'momo', 'shawarma', 'cake', 'ice cream', 'chocolate', 'biscuit', 'maggi', 'canteen'],
+            Travel: ['fuel', 'petrol', 'diesel', 'bus', 'metro', 'train', 'taxi', 'cab', 'auto', 'uber', 'ola', 'rapido', 'air', 'tyre', 'puncture', 'toll', 'parking', 'ticket', 'car', 'bike', 'wash', 'cleaning'],
+            Bills: ['sim', 'recharge', 'jio', 'airtel', 'vi', 'bsnl', 'wifi', 'broadband', 'internet', 'bill', 'electricity', 'power', 'rent', 'netflix', 'spotify', 'prime', 'youtube', 'subscription', 'emi', 'fee', 'fees'],
+            Other: ['movie', 'book', 'books', 'pen', 'xerox', 'print', 'gift', 'bday', 'hair', 'haircut', 'salon', 'barber', 'medicine', 'tablet', 'hospital', 'change', 'entry']
+        };
+
+        let manualCategoryOverride = false;
+
+        function detectCategoryFromText(text) {
+            const clean = text.toLowerCase().trim();
+            if (!clean) return null;
+            for (const [category, words] of Object.entries(CATEGORY_KEYWORDS)) {
+                for (const word of words) {
+                    if (clean.includes(word)) return category;
+                }
+            }
+            return null;
+        }
+
+        function autoCategorize(text) {
+            if (manualCategoryOverride) return;
+            const matchedCat = detectCategoryFromText(text);
+            const badge = document.getElementById('autoCatBadge');
+            if (matchedCat) {
+                setCategory(matchedCat, false);
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function autoCategorizeChip(text) {
+            const matchedCat = detectCategoryFromText(text);
+            if (matchedCat) setChipCategory(matchedCat);
+        }
+
+        // ==========================================
+        // 3. SWIPE LEFT / RIGHT NAVIGATION
+        // ==========================================
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let activeTab = 'tx';
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.closest('#chipsContainer') || !document.getElementById('flowModal').classList.contains('hidden') || !document.getElementById('authModal').classList.contains('hidden')) {
+                touchStartX = null;
+                return;
+            }
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (touchStartX === null) return;
+            const deltaX = e.changedTouches[0].screenX - touchStartX;
+            const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
+
+            if (Math.abs(deltaX) > 65 && deltaY < 50) {
+                if (deltaX < 0 && activeTab === 'tx') switchTab('analytics');
+                else if (deltaX > 0 && activeTab === 'analytics') switchTab('tx');
+            }
+            touchStartX = null;
+        }, { passive: true });
+
+        // ==========================================
+        // 4. INDEXED_DB ARCHITECTURE
         // ==========================================
         const DB_NAME = 'WalletProDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'transactions';
         let db;
-        let currentAnalyticsFilter = '7D'; // 7D, 30D, ALL
+        let currentAnalyticsFilter = '7D';
 
         function initDB() {
             return new Promise((resolve, reject) => {
@@ -319,12 +613,18 @@
             });
         }
 
-        function dbPut(item) {
+        function dbPut(item, pushToCloud = true) {
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.put(item);
-                tx.oncomplete = () => resolve();
+                tx.oncomplete = async () => {
+                    if (pushToCloud && supabaseClient && currentUser) {
+                        const cleanItem = cleanForCloud(item, currentUser.id);
+                        supabaseClient.from('transactions').upsert(cleanItem, { onConflict: 'id,user_id' }).then();
+                    }
+                    resolve();
+                };
                 tx.onerror = () => reject(tx.error);
             });
         }
@@ -334,7 +634,12 @@
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.delete(id);
-                tx.oncomplete = () => resolve();
+                tx.oncomplete = () => {
+                    if (supabaseClient && currentUser) {
+                        supabaseClient.from('transactions').delete().eq('id', id).eq('user_id', currentUser.id).then();
+                    }
+                    resolve();
+                };
                 tx.onerror = () => reject(tx.error);
             });
         }
@@ -354,14 +659,14 @@
             if (oldData) {
                 try {
                     const parsed = JSON.parse(oldData);
-                    for (const item of parsed) { await dbPut(item); }
+                    for (const item of parsed) { await dbPut(item, false); }
                     localStorage.removeItem('wallet_history');
                 } catch (e) { console.error("Migration failed", e); }
             }
         }
 
         // ==========================================
-        // APP LOGIC
+        // 5. CORE APP LOGIC
         // ==========================================
         let currentFlow = { type: 'OUT', id: null, isEditing: false, category: 'Food' };
         let currentChipCategory = 'Food';
@@ -459,6 +764,7 @@
         }
 
         function switchTab(tab) {
+            activeTab = tab;
             const txView = document.getElementById('tabTransactions');
             const analyticsView = document.getElementById('tabAnalytics');
             const navTx = document.getElementById('navTx');
@@ -477,7 +783,11 @@
             }
         }
 
-        function setCategory(cat) {
+        function setCategory(cat, isManual = false) {
+            if (isManual) {
+                manualCategoryOverride = true;
+                document.getElementById('autoCatBadge').classList.add('hidden');
+            }
             currentFlow.category = cat;
             document.querySelectorAll('.cat-pill').forEach(btn => {
                 if (btn.innerText === cat) btn.className = 'cat-pill py-2.5 rounded-xl text-xs font-bold border border-blue-500 bg-blue-600 text-white spring-press';
@@ -486,7 +796,10 @@
         }
 
         function openFlow(type) {
-            currentFlow = { type: type, id: null, isEditing: false, category: 'Food' };
+            manualCategoryOverride = false;
+            document.getElementById('autoCatBadge').classList.add('hidden');
+            currentFlow = { type: type, id: null, isEditing: false, category: type === 'IN' ? 'Other' : 'Food' };
+            
             const titleEl = document.getElementById('flowTitle');
             titleEl.innerText = type === 'IN' ? 'Income' : 'Expense';
             titleEl.className = type === 'IN' ? 'font-black text-sm uppercase tracking-widest text-emerald-400' : 'font-black text-sm uppercase tracking-widest text-rose-400';
@@ -494,7 +807,7 @@
             document.getElementById('numAmount').value = '';
             document.getElementById('reasonInput').value = '';
             document.getElementById('deleteBtn').classList.add('hidden');
-            setCategory('Food');
+            setCategory(currentFlow.category, false);
 
             document.getElementById('flowModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('numAmount').focus(), 150);
@@ -505,14 +818,17 @@
             const item = historyData.find(t => t.id === id);
             if (!item) return;
 
+            manualCategoryOverride = false;
+            document.getElementById('autoCatBadge').classList.add('hidden');
             currentFlow = { type: item.type, id: item.id, isEditing: true, category: item.category || 'Other' };
+            
             const titleEl = document.getElementById('flowTitle');
             titleEl.innerText = "Edit Entry";
             titleEl.className = 'font-black text-sm uppercase tracking-widest text-white';
 
             document.getElementById('numAmount').value = item.amount;
             document.getElementById('reasonInput').value = item.reason;
-            setCategory(currentFlow.category);
+            setCategory(currentFlow.category, false);
             document.getElementById('deleteBtn').classList.remove('hidden');
 
             document.getElementById('flowModal').classList.remove('hidden');
@@ -550,7 +866,13 @@
         }
 
         async function resetAll() {
-            if (confirm("Clear all transactions and reset balance to ₹0?")) { await dbClearAll(); render(); }
+            if (confirm("Clear all transactions and reset balance to ₹0?")) {
+                await dbClearAll();
+                if (supabaseClient && currentUser) {
+                    await supabaseClient.from('transactions').delete().eq('user_id', currentUser.id);
+                }
+                render();
+            }
         }
 
         function editDailyBudget() {
@@ -561,9 +883,15 @@
             }
         }
 
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            render();
+        }
+
         async function render() {
             const historyData = await dbGetAll();
-            const search = (document.getElementById('searchInput').value || '').toLowerCase();
+            const rawSearch = document.getElementById('searchInput').value || '';
+            const search = rawSearch.toLowerCase().trim();
             const list = document.getElementById('historyList');
             let totalBalance = 0; let totalIncome = 0; let todaySpent = 0;
             const todayStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
@@ -596,7 +924,39 @@
             budgetBar.style.width = `${budgetPct}%`;
             budgetBar.className = budgetPct >= 90 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' : budgetPct >= 65 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 'bg-emerald-400 h-full rounded-full transition-all duration-500';
 
-            historyData.filter(tx => (tx.reason || '').toLowerCase().includes(search)).forEach(tx => {
+            const filteredList = historyData.filter(tx => 
+                (tx.reason || '').toLowerCase().includes(search) || 
+                (tx.category || '').toLowerCase().includes(search)
+            );
+
+            const searchSummary = document.getElementById('searchSummary');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            if (search.length > 0) {
+                let searchOut = 0; let searchIn = 0;
+                filteredList.forEach(tx => {
+                    if (tx.type === 'IN') searchIn += Number(tx.amount) || 0;
+                    else searchOut += Number(tx.amount) || 0;
+                });
+
+                document.getElementById('searchCount').innerText = `${filteredList.length} ${filteredList.length === 1 ? 'entry' : 'entries'} for "${rawSearch.trim()}"`;
+                document.getElementById('searchTotalOut').innerText = `Spent: -₹${formatCurrency(searchOut)}`;
+                
+                const searchInEl = document.getElementById('searchTotalIn');
+                if (searchIn > 0) {
+                    searchInEl.innerText = `Income: +₹${formatCurrency(searchIn)}`;
+                    searchInEl.classList.remove('hidden');
+                } else {
+                    searchInEl.classList.add('hidden');
+                }
+
+                searchSummary.classList.remove('hidden');
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                searchSummary.classList.add('hidden');
+                clearSearchBtn.classList.add('hidden');
+            }
+
+            filteredList.forEach(tx => {
                 const item = document.createElement('div');
                 item.className = 'glass-card p-4 rounded-3xl flex justify-between items-center spring-press cursor-pointer';
                 item.onclick = () => openEdit(tx.id);
@@ -614,20 +974,17 @@
             });
 
             document.getElementById('totalBalance').innerText = `₹${formatCurrency(totalBalance)}`;
-            document.getElementById('totalBalance').className = `text-4xl font-black italic tracking-tight ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
+            document.getElementById('totalBalance').className = `text-4xl font-black italic tracking-tight mt-1 ${totalBalance < 0 ? 'text-rose-400' : 'text-white'}`;
         }
 
         // ==========================================
-        // SMART ANALYTICS ENGINE
+        // 6. SMART ANALYTICS ENGINE
         // ==========================================
         function setAnalyticsFilter(f) {
             currentAnalyticsFilter = f;
-            
-            // Update button UI
             document.getElementById('btnFilter7D').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === '7D' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
             document.getElementById('btnFilter30D').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === '30D' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
             document.getElementById('btnFilterALL').className = `flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${f === 'ALL' ? 'bg-slate-700/80 text-white shadow-md' : 'text-slate-400'}`;
-            
             renderAnalytics();
         }
 
@@ -640,14 +997,12 @@
             const now = new Date();
             const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             
-            // Step 1: Filter data based on selection
             let cutoff = 0;
             if (currentAnalyticsFilter === '7D') cutoff = todayMidnight - (6 * 24 * 60 * 60 * 1000);
             if (currentAnalyticsFilter === '30D') cutoff = todayMidnight - (29 * 24 * 60 * 60 * 1000);
             
             const filteredTx = currentAnalyticsFilter === 'ALL' ? historyData : historyData.filter(tx => tx.timestamp >= cutoff);
 
-            // Step 2: Calculate Category Totals (Automatically adjusts to filter)
             const categories = {}; let totalOut = 0;
             filteredTx.forEach(tx => {
                 if (tx.type === 'OUT') {
@@ -658,11 +1013,9 @@
                 }
             });
 
-            // Update Header
             document.getElementById('chartTitle').innerText = currentAnalyticsFilter === '7D' ? 'Past 7 Days' : currentAnalyticsFilter === '30D' ? 'Past 30 Days' : 'All Time';
             document.getElementById('chartTotal').innerText = `Total: ₹${formatCurrency(totalOut)}`;
 
-            // Step 3: Render Chart
             if (currentAnalyticsFilter === '7D' || currentAnalyticsFilter === '30D') {
                 const daysCount = currentAnalyticsFilter === '7D' ? 7 : 30;
                 const days = [];
@@ -689,7 +1042,6 @@
                         labelText = `<span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>`;
                         amtText = `<span class="text-[9px] text-slate-400 font-bold">${d.total ? '₹' + d.total : ''}</span>`;
                     } else {
-                        // 30 Days: Only show numbers on ends and middle to avoid crowding
                         const isLabel = idx === 0 || idx === 14 || idx === 29;
                         labelText = isLabel ? `<span class="text-[9px] text-slate-500 font-bold mt-1">${d.dayName}</span>` : `<span class="text-[9px] text-transparent mt-1">-</span>`;
                     }
@@ -702,7 +1054,6 @@
                         </div>`;
                 });
             } else {
-                // ALL TIME: Render By Month
                 const monthsMap = {};
                 filteredTx.forEach(tx => {
                     if (tx.type === 'OUT') {
@@ -730,7 +1081,6 @@
                 }
             }
 
-            // Step 4: Render Categories (Dynamically calculated based on the selected timeframe)
             if (Object.keys(categories).length === 0) {
                 catList.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No spending in this period.</p>`; return;
             }
@@ -751,7 +1101,7 @@
         }
 
         // ==========================================
-        // EXPORT LOGIC
+        // 7. EXPORT & IMPORT LOGIC
         // ==========================================
         function openExportModal() { document.getElementById('exportModal').classList.remove('hidden'); }
         function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
@@ -819,7 +1169,8 @@
                     const parsed = JSON.parse(e.target.result);
                     if (Array.isArray(parsed)) {
                         await dbClearAll();
-                        for(const item of parsed) { await dbPut(item); }
+                        for(const item of parsed) { await dbPut(item, false); }
+                        await syncWithCloud();
                         alert("Backup restored into IndexedDB!"); render();
                     } else alert("Invalid backup format.");
                 } catch (err) { alert("Error parsing file."); }
@@ -829,8 +1180,11 @@
 
         window.onload = async () => {
             try {
-                await initDB(); await migrateIfNeeded();
-                renderChips(); render();
+                await initDB();
+                await migrateIfNeeded();
+                renderChips();
+                await render();
+                await checkUserSession();
             } catch(e) { console.error("Database Error:", e); alert("Failed to initialize database."); }
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
         };
