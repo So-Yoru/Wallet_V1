@@ -458,20 +458,30 @@
         }
 
         // Strip any extra legacy keys (like lat/lon) so PostgreSQL accepts every row cleanly
+        // Strip any extra legacy keys so PostgreSQL accepts every row cleanly.
+        // TRANSFER rows carry from/to endpoints; other rows carry the owning account.
         function cleanForCloud(item, userId) {
-            return {
+            const base = {
                 id: Number(item.id),
                 user_id: userId,
                 type: String(item.type || 'OUT'),
                 amount: Number(item.amount || 0),
                 reason: String(item.reason || 'Other'),
                 category: String(item.category || 'Other'),
-                account_id: String(item.account_id || 'cash'),
+                account_id: String(item.account_id || (item.type === 'TRANSFER' ? item.from_account : 'cash') || 'cash'),
                 time: String(item.time || ''),
                 date: String(item.date || ''),
                 timestamp: Number(item.timestamp || item.id || Date.now()),
                 edited: Boolean(item.edited)
             };
+
+            if (item.type === 'TRANSFER') {
+                base.from_account = String(item.from_account || 'cash');
+                base.to_account = String(item.to_account || 'cash');
+            } else {
+                base.account_id = String(item.account_id || 'cash');
+            }
+            return base;
         }
 
         function updateCloudBadge() {
