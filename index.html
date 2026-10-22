@@ -1290,12 +1290,38 @@
 
         function closeModal() { document.getElementById('flowModal').classList.add('hidden'); }
 
+        async function getAccountBalance(accId, excludeTxId) {
+            const txs = await dbGetAll();
+            let bal = 0;
+            txs.forEach(t => {
+                if (excludeTxId && t.id === excludeTxId) return;
+                const amt = Number(t.amount) || 0;
+                if (t.type === 'TRANSFER') {
+                    if (t.from_account === accId) bal -= amt;
+                    if (t.to_account === accId) bal += amt;
+                } else if (t.account_id === accId) {
+                    if (t.type === 'IN') bal += amt;
+                    else bal -= amt;
+                }
+            });
+            return bal;
+        }
+
         async function saveTransaction() {
             const amountVal = parseFloat(document.getElementById('numAmount').value);
             if (!amountVal || isNaN(amountVal) || amountVal <= 0) return alert("Please enter a valid amount");
 
             const isTransfer = currentFlow.type === 'TRANSFER';
             if (isTransfer && currentFlow.from_account === currentFlow.to_account) return alert("From and To accounts must be different");
+
+            if (isTransfer) {
+                const fromBal = await getAccountBalance(currentFlow.from_account, currentFlow.isEditing ? currentFlow.id : null);
+                if (amountVal > fromBal) {
+                    const accounts = await dbGetAccounts();
+                    const fromName = (accounts.find(a => a.id === currentFlow.from_account) || {}).name || 'account';
+                    return alert(`Not enough money in ${fromName}. Available: ₹${formatCurrency(Math.max(fromBal, 0))}`);
+                }
+            }
 
             const reason = document.getElementById('reasonInput').value.trim() || (isTransfer ? 'Transfer' : 'Other');
             const now = new Date();
