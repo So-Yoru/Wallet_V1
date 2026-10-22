@@ -56,6 +56,16 @@
 
         ::-webkit-scrollbar { width: 0px; height: 0px; }
         .hide-tab { display: none !important; }
+
+        .tab-anim-fwd { animation: tabFwd 0.32s var(--ios-spring); }
+        .tab-anim-back { animation: tabBack 0.32s var(--ios-spring); }
+        @keyframes tabFwd { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+        @keyframes tabBack { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+
+        [id$="Modal"] > .absolute { animation: backdropIn 0.25s ease; }
+        [id$="Modal"] > .relative { animation: sheetUp 0.34s var(--ios-spring); }
+        @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sheetUp { from { opacity: 0; transform: translateY(48px) scale(0.98); } to { opacity: 1; transform: none; } }
     </style>
 </head>
 <body class="p-5 max-w-md mx-auto pb-32 select-none">
@@ -81,6 +91,7 @@
                 </div>
             </div>
             <h1 id="totalBalance" class="text-4xl font-black text-white italic tracking-tight mt-1">₹0</h1>
+            <div id="accountPills" class="flex gap-2 overflow-x-auto mt-3 pb-1"></div>
 
             <div class="mt-5 pt-4 border-t border-white/10 space-y-3.5">
                 <div>
@@ -150,12 +161,36 @@
         <div id="historyList" class="space-y-3 pb-8"></div>
     </main>
 
+    <!-- TAB 2: ACCOUNTS -->
+    <main id="tabAccounts" class="hide-tab">
+        <div class="mt-4 mb-5 flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-black tracking-tight">Accounts</h2>
+                <p class="text-slate-400 text-xs mt-1">Where your money actually lives</p>
+            </div>
+        </div>
+
+        <div id="accountsList" class="space-y-3"></div>
+
+        <div class="flex gap-3 mt-4 mb-8">
+            <button type="button" onclick="openFlow('TRANSFER')" class="spring-press flex-1 h-16 bg-gradient-to-br from-amber-500 to-amber-700 rounded-3xl flex flex-col items-center justify-center shadow-lg shadow-amber-950/50 border border-amber-400/30 cursor-pointer">
+                <span class="text-xl font-black">⇄</span>
+                <span class="text-[10px] font-black tracking-widest uppercase">Move Money</span>
+            </button>
+            <button type="button" onclick="openAccountModal(null)" class="spring-press flex-1 h-16 glass-pill rounded-3xl flex flex-col items-center justify-center border border-blue-500/40 cursor-pointer">
+                <span class="text-xl font-black text-blue-400">＋</span>
+                <span class="text-[10px] font-black tracking-widest uppercase text-blue-400">Add Account</span>
+            </button>
+        </div>
+        <p class="text-center text-[10px] text-slate-500 italic -mt-4">Tap an account to edit • Transfers don't count as spending</p>
+    </main>
+
     <!-- TAB 2: ANALYTICS -->
     <main id="tabAnalytics" class="hide-tab">
         <div class="mt-4 mb-6 flex justify-between items-end">
             <div>
                 <h2 class="text-2xl font-black tracking-tight">Analytics</h2>
-                <p class="text-slate-400 text-xs mt-1">Swipe right to return to Wallet</p>
+                <p class="text-slate-400 text-xs mt-1">Swipe right for Accounts</p>
             </div>
         </div>
 
@@ -181,16 +216,21 @@
     </main>
 
     <!-- BOTTOM NAV -->
-    <div class="fixed bottom-6 left-0 right-0 max-w-xs mx-auto px-4 z-30">
-        <nav class="glass-pill rounded-[2rem] px-6 py-2.5 flex justify-around items-center border border-white/15 shadow-2xl">
-            <button id="navTx" onclick="switchTab('tx')" class="spring-press flex items-center gap-2 text-blue-400 cursor-pointer">
+    <div class="fixed bottom-6 left-0 right-0 max-w-md mx-auto px-6 z-30">
+        <nav class="glass-pill rounded-[2rem] px-4 py-2.5 flex justify-around items-center border border-white/15 shadow-2xl">
+            <button id="navTx" onclick="switchTab('tx')" class="spring-press flex items-center gap-1.5 text-blue-400 cursor-pointer">
                 <span class="text-lg">💳</span>
-                <span class="text-xs font-black uppercase tracking-wider">Wallet</span>
+                <span class="text-[11px] font-black uppercase tracking-wider">Wallet</span>
             </button>
             <div class="w-px h-6 bg-white/10"></div>
-            <button id="navAnalytics" onclick="switchTab('analytics')" class="spring-press flex items-center gap-2 text-slate-400 cursor-pointer">
+            <button id="navAccounts" onclick="switchTab('accounts')" class="spring-press flex items-center gap-1.5 text-slate-400 cursor-pointer">
+                <span class="text-lg">🏦</span>
+                <span class="text-[11px] font-black uppercase tracking-wider">Accounts</span>
+            </button>
+            <div class="w-px h-6 bg-white/10"></div>
+            <button id="navAnalytics" onclick="switchTab('analytics')" class="spring-press flex items-center gap-1.5 text-slate-400 cursor-pointer">
                 <span class="text-lg">📊</span>
-                <span class="text-xs font-black uppercase tracking-wider">Analytics</span>
+                <span class="text-[11px] font-black uppercase tracking-wider">Analytics</span>
             </button>
         </nav>
     </div>
@@ -235,6 +275,39 @@
         </div>
     </div>
 
+    <!-- ACCOUNT MODAL -->
+    <div id="accountModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div onclick="closeAccountModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-md bg-slate-900 glass-card rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 border-t sm:border border-white/15 z-10">
+            <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+            <h3 id="accountModalTitle" class="text-base font-black text-center mb-4 tracking-tight text-white">Add Account</h3>
+
+            <div class="space-y-4 mb-5">
+                <div class="flex gap-2">
+                    <input type="text" id="accEmoji" placeholder="💵" maxlength="2" class="glass-pill w-16 text-center p-3 text-xl rounded-xl outline-none border border-white/10 text-white">
+                    <input type="text" id="accName" placeholder="Account name (e.g. HDFC)" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white">
+                </div>
+                <div>
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Type</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="setAccType('cash')" class="acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-blue-500 bg-blue-600 text-white spring-press">Cash</button>
+                        <button type="button" onclick="setAccType('bank')" class="acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Bank</button>
+                        <button type="button" onclick="setAccType('card')" class="acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Card</button>
+                        <button type="button" onclick="setAccType('other')" class="acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press">Other</button>
+                    </div>
+                </div>
+            </div>
+
+            <p id="accErrorMsg" class="hidden text-xs font-bold text-rose-400 text-center mb-3"></p>
+
+            <div class="flex gap-2">
+                <button type="button" id="btnDeleteAccount" onclick="deleteAccountAction()" class="spring-press hidden bg-rose-950/50 border border-rose-800/50 text-rose-400 px-5 py-3.5 rounded-2xl font-bold text-sm">Delete</button>
+                <button type="button" onclick="closeAccountModal()" class="spring-press flex-1 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-bold text-sm">Cancel</button>
+                <button type="button" onclick="saveAccountAction()" class="spring-press flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-black text-sm">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN TRANSACTION MODAL -->
     <div id="flowModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="closeModal()" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
@@ -255,7 +328,7 @@
                 </div>
             </div>
 
-            <div class="mb-5">
+            <div class="mb-5" id="categorySection">
                 <div class="flex justify-center items-center gap-1.5 mb-2.5">
                     <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Category</p>
                     <span id="autoCatBadge" class="hidden text-[9px] font-black text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded-full border border-sky-400/20">✨ Auto</span>
@@ -265,6 +338,22 @@
                     <button type="button" onclick="setCategory('Travel', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Travel</button>
                     <button type="button" onclick="setCategory('Bills', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Bills</button>
                     <button type="button" onclick="setCategory('Other', true)" class="cat-pill py-2.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 spring-press">Other</button>
+                </div>
+            </div>
+
+            <div class="mb-5" id="accountPickerWrap">
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Account</p>
+                <div id="accountPicker" class="flex gap-2 overflow-x-auto pb-1 justify-center"></div>
+            </div>
+
+            <div class="mb-5 hidden space-y-3" id="transferPickers">
+                <div class="flex gap-3 items-center">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 w-12 text-right">From</span>
+                    <select id="fromAccountSelect" onchange="currentFlow.from_account = this.value" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white bg-slate-900 appearance-none"></select>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 w-12 text-right">To</span>
+                    <select id="toAccountSelect" onchange="currentFlow.to_account = this.value" class="glass-pill flex-1 p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white bg-slate-900 appearance-none"></select>
                 </div>
             </div>
 
@@ -292,6 +381,8 @@
                 </div>
                 <input type="number" id="newChipAmount" placeholder="Amount (₹)" class="glass-pill w-full text-center p-3 text-sm rounded-xl outline-none border border-white/10 font-bold text-white" inputmode="numeric">
                 <div>
+                    <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Chip Account</p>
+                    <div id="chipAccountPicker" class="flex gap-2 overflow-x-auto pb-1 justify-center mb-3"></div>
                     <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest text-center mb-2">Chip Category</p>
                     <div class="grid grid-cols-4 gap-2">
                         <button type="button" onclick="setChipCategory('Food')" class="chip-cat-pill py-2.5 rounded-xl text-[11px] font-bold border border-blue-500 bg-blue-600 text-white spring-press">Food</button>
@@ -353,13 +444,17 @@
         // ==========================================
         // 1. SUPABASE CLOUD SYNC & AUTHENTICATION
         // ==========================================
-        const SUPABASE_URL = "https://jxtakyzlgpqaahvrmpii.supabase.co"; // <-- PASTE YOUR PROJECT URL HERE
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGFreXpsZ3BxYWFodnJtcGlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyODU0MzYsImV4cCI6MjEwNzg2MTQzNn0.kD5YEj_SI73B5wp7SD12VWXxNciu4ALzoBCV8-yqZ1w"; // <-- PASTE YOUR ANON PUBLIC KEY HERE
+        const SUPABASE_URL = "https://jxtakyzlgpqaahvrmpii.supabase.co"; 
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dGFreXpsZ3BxYWFodnJtcGlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyODU0MzYsImV4cCI6MjEwNzg2MTQzNn0.kD5YEj_SI73B5wp7SD12VWXxNciu4ALzoBCV8-yqZ1w"; 
         let supabaseClient = null;
         let currentUser = null;
 
-        if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        try {
+            if (SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includes("YOUR_URL")) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch (err) {
+            console.error("Failed to initialize Supabase client:", err);
         }
 
         // Strip any extra legacy keys (like lat/lon) so PostgreSQL accepts every row cleanly
@@ -371,6 +466,7 @@
                 amount: Number(item.amount || 0),
                 reason: String(item.reason || 'Other'),
                 category: String(item.category || 'Other'),
+                account_id: String(item.account_id || 'cash'),
                 time: String(item.time || ''),
                 date: String(item.date || ''),
                 timestamp: Number(item.timestamp || item.id || Date.now()),
@@ -487,6 +583,27 @@
         async function syncWithCloud() {
             if (!supabaseClient || !currentUser) return;
             try {
+                // 0. Sync accounts first so transaction account_ids have something to point at
+                const localAccounts = await dbGetAccounts();
+                if (localAccounts.length > 0) {
+                    const accPayload = localAccounts.map(a => ({
+                        id: a.id, user_id: currentUser.id, name: a.name,
+                        emoji: a.emoji || '💵', type: a.type || 'cash',
+                        order: a.order || 0, created_at: a.created_at || 0
+                    }));
+                    const { error: accPushErr } = await supabaseClient
+                        .from('accounts')
+                        .upsert(accPayload, { onConflict: 'id,user_id' });
+                    if (accPushErr) console.error("Accounts Push Error:", accPushErr.message);
+                }
+                const { data: cloudAccounts, error: accPullErr } = await supabaseClient
+                    .from('accounts')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+                if (!accPullErr && cloudAccounts) {
+                    for (const acc of cloudAccounts) { await dbPutAccount(acc, false); }
+                }
+
                 // 1. Push local IndexedDB records up to this user's cloud account
                 const localItems = await dbGetAll();
                 if (localItems.length > 0) {
@@ -558,9 +675,15 @@
         let touchStartX = 0;
         let touchStartY = 0;
         let activeTab = 'tx';
+        const TAB_ORDER = ['tx', 'accounts', 'analytics'];
+
+        function anyModalOpen() {
+            return ['flowModal', 'authModal', 'chipModal', 'accountModal', 'exportModal']
+                .some(id => !document.getElementById(id).classList.contains('hidden'));
+        }
 
         document.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#chipsContainer') || !document.getElementById('flowModal').classList.contains('hidden') || !document.getElementById('authModal').classList.contains('hidden')) {
+            if (e.target.closest('#chipsContainer') || anyModalOpen()) {
                 touchStartX = null;
                 return;
             }
@@ -574,8 +697,9 @@
             const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
 
             if (Math.abs(deltaX) > 65 && deltaY < 50) {
-                if (deltaX < 0 && activeTab === 'tx') switchTab('analytics');
-                else if (deltaX > 0 && activeTab === 'analytics') switchTab('tx');
+                const idx = TAB_ORDER.indexOf(activeTab);
+                if (deltaX < 0 && idx < TAB_ORDER.length - 1) switchTab(TAB_ORDER[idx + 1]);
+                else if (deltaX > 0 && idx > 0) switchTab(TAB_ORDER[idx - 1]);
             }
             touchStartX = null;
         }, { passive: true });
@@ -584,8 +708,9 @@
         // 4. INDEXED_DB ARCHITECTURE
         // ==========================================
         const DB_NAME = 'WalletProDB';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2;
         const STORE_NAME = 'transactions';
+        const ACC_STORE_NAME = 'accounts';
         let db;
         let currentAnalyticsFilter = '7D';
 
@@ -597,10 +722,44 @@
                     if (!database.objectStoreNames.contains(STORE_NAME)) {
                         database.createObjectStore(STORE_NAME, { keyPath: 'id' });
                     }
+                    if (!database.objectStoreNames.contains(ACC_STORE_NAME)) {
+                        database.createObjectStore(ACC_STORE_NAME, { keyPath: 'id' });
+                    }
                 };
-                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                request.onblocked = () => {
+                    alert("Wallet is open in another tab or window. Please close the other instance, then reload this page. Your data is safe.");
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    // If a newer version needs to upgrade, release the connection instead of blocking it
+                    db.onversionchange = () => { db.close(); };
+                    resolve(db);
+                };
                 request.onerror = (e) => reject(e.target.error);
             });
+        }
+
+        // Ensure a Cash account exists and every transaction points at a valid account
+        async function ensureAccountData() {
+            let accounts = await dbGetAccounts();
+            if (accounts.length === 0) {
+                await dbPutAccount({ id: 'cash', name: 'Cash', emoji: '💵', type: 'cash', order: 0, created_at: Date.now() }, false);
+                accounts = await dbGetAccounts();
+            }
+            const accIds = accounts.map(a => a.id);
+            const fallback = accIds.includes('cash') ? 'cash' : accIds[0];
+            const txs = await dbGetAll();
+            for (const tx of txs) {
+                let needsFix = false; let fixed = { ...tx };
+                if (tx.type === 'TRANSFER') {
+                    if (!accIds.includes(tx.from_account)) { fixed.from_account = fallback; needsFix = true; }
+                    if (!accIds.includes(tx.to_account)) { fixed.to_account = fallback; needsFix = true; }
+                    if (needsFix) fixed.account_id = fixed.from_account;
+                } else if (!accIds.includes(tx.account_id)) {
+                    fixed.account_id = fallback; needsFix = true;
+                }
+                if (needsFix) await dbPut(fixed, false);
+            }
         }
 
         function dbGetAll() {
@@ -654,6 +813,47 @@
             });
         }
 
+        function dbGetAccounts() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ACC_STORE_NAME, 'readonly');
+                const request = tx.objectStore(ACC_STORE_NAME).getAll();
+                request.onsuccess = () => resolve(request.result.sort((a, b) => (a.order || 0) - (b.order || 0)));
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function dbPutAccount(item, pushToCloud = true) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ACC_STORE_NAME, 'readwrite');
+                tx.objectStore(ACC_STORE_NAME).put(item);
+                tx.oncomplete = () => {
+                    if (pushToCloud && supabaseClient && currentUser) {
+                        supabaseClient.from('accounts').upsert({
+                            id: item.id, user_id: currentUser.id, name: item.name,
+                            emoji: item.emoji || '💵', type: item.type || 'cash',
+                            order: item.order || 0, created_at: item.created_at || 0
+                        }, { onConflict: 'id,user_id' }).then();
+                    }
+                    resolve();
+                };
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function dbDeleteAccount(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ACC_STORE_NAME, 'readwrite');
+                tx.objectStore(ACC_STORE_NAME).delete(id);
+                tx.oncomplete = () => {
+                    if (supabaseClient && currentUser) {
+                        supabaseClient.from('accounts').delete().eq('id', id).eq('user_id', currentUser.id).then();
+                    }
+                    resolve();
+                };
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
         async function migrateIfNeeded() {
             const oldData = localStorage.getItem('wallet_history');
             if (oldData) {
@@ -663,6 +863,158 @@
                     localStorage.removeItem('wallet_history');
                 } catch (e) { console.error("Migration failed", e); }
             }
+        }
+
+        // ==========================================
+        // 4.5 ACCOUNTS (MULTI-ACCOUNT + TRANSFERS)
+        // ==========================================
+        let currentAccountFilter = null;
+        let currentAccType = 'cash';
+        let editingAccountId = null;
+        let chipAccountSelection = 'cash';
+
+        async function renderAccounts() {
+            const accounts = await dbGetAccounts();
+            const txs = await dbGetAll();
+            const list = document.getElementById('accountsList');
+            list.innerHTML = '';
+
+            const balances = {};
+            const monthCounts = {};
+            const now = new Date();
+            txs.forEach(tx => {
+                const amt = Number(tx.amount) || 0;
+                if (tx.type === 'TRANSFER') {
+                    balances[tx.from_account] = (balances[tx.from_account] || 0) - amt;
+                    balances[tx.to_account] = (balances[tx.to_account] || 0) + amt;
+                } else if (tx.type === 'IN') {
+                    balances[tx.account_id] = (balances[tx.account_id] || 0) + amt;
+                } else {
+                    balances[tx.account_id] = (balances[tx.account_id] || 0) - amt;
+                }
+                const inMonth = new Date(tx.timestamp).getMonth() === now.getMonth() && new Date(tx.timestamp).getFullYear() === now.getFullYear();
+                if (inMonth) {
+                    const ids = tx.type === 'TRANSFER' ? [tx.from_account, tx.to_account] : [tx.account_id];
+                    ids.forEach(id => monthCounts[id] = (monthCounts[id] || 0) + 1);
+                }
+            });
+            accounts.forEach(acc => {
+                if (balances[acc.id] === undefined) balances[acc.id] = 0;
+                if (monthCounts[acc.id] === undefined) monthCounts[acc.id] = 0;
+            });
+
+            if (accounts.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No accounts yet. Add one below.</p>`;
+                return;
+            }
+
+            accounts.forEach(acc => {
+                const bal = balances[acc.id] || 0;
+                const card = document.createElement('div');
+                card.className = 'glass-card p-5 rounded-3xl flex justify-between items-center spring-press cursor-pointer';
+                card.onclick = () => openAccountModal(acc.id);
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">${acc.emoji || '💵'}</span>
+                        <div>
+                            <p class="font-black text-sm text-white tracking-tight">${acc.name}</p>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase mt-0.5">${acc.type} • ${monthCounts[acc.id] || 0} txns this month</p>
+                        </div>
+                    </div>
+                    <p class="font-black text-lg ${bal < 0 ? 'text-rose-400' : 'text-white'}">₹${formatCurrency(bal)}</p>`;
+                list.appendChild(card);
+            });
+        }
+
+        async function openAccountModal(id) {
+            editingAccountId = id;
+            const errEl = document.getElementById('accErrorMsg');
+            errEl.classList.add('hidden');
+            document.getElementById('btnDeleteAccount').classList.add('hidden');
+
+            let acc = { name: '', emoji: '💵', type: 'cash' };
+            const accounts = await dbGetAccounts();
+            if (id) {
+                const found = accounts.find(a => a.id === id);
+                if (!found) return;
+                acc = found;
+                document.getElementById('accountModalTitle').innerText = 'Edit Account';
+                if (accounts.length > 1) document.getElementById('btnDeleteAccount').classList.remove('hidden');
+            } else {
+                document.getElementById('accountModalTitle').innerText = 'Add Account';
+            }
+            document.getElementById('accName').value = acc.name;
+            document.getElementById('accEmoji').value = acc.emoji || '💵';
+            setAccType(acc.type || 'cash');
+            document.getElementById('accountModal').classList.remove('hidden');
+        }
+
+        function closeAccountModal() { document.getElementById('accountModal').classList.add('hidden'); }
+
+        function setAccType(t) {
+            currentAccType = t;
+            document.querySelectorAll('.acc-type-pill').forEach(btn => {
+                if (btn.innerText.toLowerCase() === t) btn.className = 'acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-blue-500 bg-blue-600 text-white spring-press';
+                else btn.className = 'acc-type-pill py-2.5 rounded-xl text-[11px] font-bold border border-slate-700 bg-slate-800/60 text-slate-300 spring-press';
+            });
+        }
+
+        async function saveAccountAction() {
+            const name = document.getElementById('accName').value.trim();
+            const errEl = document.getElementById('accErrorMsg');
+            if (!name) {
+                errEl.innerText = 'Please enter an account name.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const emoji = document.getElementById('accEmoji').value.trim() || '💵';
+
+            if (editingAccountId) {
+                const accounts = await dbGetAccounts();
+                const acc = accounts.find(a => a.id === editingAccountId);
+                if (acc) {
+                    acc.name = name; acc.emoji = emoji; acc.type = currentAccType;
+                    await dbPutAccount(acc);
+                }
+            } else {
+                const accounts = await dbGetAccounts();
+                await dbPutAccount({ id: 'acc' + Date.now(), name, emoji, type: currentAccType, order: accounts.length, created_at: Date.now() });
+            }
+
+            closeAccountModal();
+            renderChips();
+            await renderAccounts();
+            await render();
+        }
+
+        async function deleteAccountAction() {
+            if (!editingAccountId) return;
+            const accounts = await dbGetAccounts();
+            if (accounts.length <= 1) return alert('You need at least one account.');
+            const acc = accounts.find(a => a.id === editingAccountId);
+            if (!confirm(`Delete "${acc.name}"? Its transactions will move to ${accounts.find(a => a.id !== editingAccountId).name}.`)) return;
+
+            const fallback = accounts.find(a => a.id !== editingAccountId && a.id === 'cash') || accounts.find(a => a.id !== editingAccountId);
+            const txs = await dbGetAll();
+            for (const tx of txs) {
+                if (tx.type === 'TRANSFER') {
+                    let from = tx.from_account, to = tx.to_account;
+                    if (from === editingAccountId || to === editingAccountId) {
+                        if (from === editingAccountId) from = fallback.id;
+                        if (to === editingAccountId) to = fallback.id;
+                        await dbPut({ ...tx, from_account: from, to_account: to, account_id: from }, true);
+                    }
+                } else if (tx.account_id === editingAccountId) {
+                    await dbPut({ ...tx, account_id: fallback.id }, true);
+                }
+            }
+            await dbDeleteAccount(editingAccountId);
+            if (currentAccountFilter === editingAccountId) currentAccountFilter = null;
+
+            closeAccountModal();
+            renderChips();
+            await renderAccounts();
+            await render();
         }
 
         // ==========================================
@@ -693,7 +1045,7 @@
                 btn.type = 'button';
                 btn.className = 'glass-pill px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap spring-press border-white/10 flex items-center gap-1.5 flex-shrink-0 cursor-pointer';
                 btn.innerHTML = `<span>${c.emoji}</span> <span>${c.label}</span> <span class="text-emerald-400 font-black">₹${c.amount}</span>`;
-                btn.onclick = () => quickExpense(c.amount, c.label, c.category);
+                btn.onclick = () => quickExpense(c.amount, c.label, c.category, c.account);
 
                 let timer;
                 btn.onmousedown = btn.ontouchstart = () => {
@@ -727,12 +1079,30 @@
             });
         }
 
-        function openChipModal() { 
+        async function renderChipAccountPicker(selectedId) {
+            const accounts = await dbGetAccounts();
+            if (accounts.length === 0) return;
+            if (!accounts.some(a => a.id === selectedId)) selectedId = accounts.some(a => a.id === 'cash') ? 'cash' : accounts[0].id;
+            chipAccountSelection = selectedId;
+            const picker = document.getElementById('chipAccountPicker');
+            picker.innerHTML = '';
+            accounts.forEach(acc => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-3 py-1.5 rounded-xl text-[10px] font-bold border spring-press whitespace-nowrap cursor-pointer ${acc.id === chipAccountSelection ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800/60 text-slate-300'}`;
+                btn.innerHTML = `<span>${acc.emoji || '💵'}</span> ${acc.name}`;
+                btn.onclick = () => renderChipAccountPicker(acc.id);
+                picker.appendChild(btn);
+            });
+        }
+
+        function openChipModal() {
             document.getElementById('newChipEmoji').value = '';
             document.getElementById('newChipLabel').value = '';
             document.getElementById('newChipAmount').value = '';
             setChipCategory('Food');
-            document.getElementById('chipModal').classList.remove('hidden'); 
+            renderChipAccountPicker('cash');
+            document.getElementById('chipModal').classList.remove('hidden');
         }
         
         function closeChipModal() { document.getElementById('chipModal').classList.add('hidden'); }
@@ -746,16 +1116,21 @@
             if (!amount || amount <= 0) return alert('Please enter a valid amount');
 
             const chips = getCustomChips();
-            chips.push({ emoji, label, amount, category: currentChipCategory });
+            chips.push({ emoji, label, amount, category: currentChipCategory, account: chipAccountSelection });
             localStorage.setItem('wallet_custom_chips', JSON.stringify(chips));
             
             closeChipModal(); renderChips();
         }
 
-        async function quickExpense(amount, reason, category) {
+        async function quickExpense(amount, reason, category, accountId) {
+            let accId = accountId || 'cash';
+            try {
+                const accounts = await dbGetAccounts();
+                if (!accounts.some(a => a.id === accId)) accId = accounts.some(a => a.id === 'cash') ? 'cash' : (accounts[0] ? accounts[0].id : 'cash');
+            } catch (e) { accId = 'cash'; }
             const now = new Date();
             const tx = {
-                id: Date.now(), type: 'OUT', amount: Number(amount), reason: reason, category: category || 'Food',
+                id: Date.now(), type: 'OUT', amount: Number(amount), reason: reason, category: category || 'Food', account_id: accId,
                 time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
                 date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
                 timestamp: now.getTime(), edited: false
@@ -764,23 +1139,29 @@
         }
 
         function switchTab(tab) {
+            const prevIdx = TAB_ORDER.indexOf(activeTab);
+            const nextIdx = TAB_ORDER.indexOf(tab);
+            if (prevIdx === nextIdx) return;
+            const direction = nextIdx > prevIdx ? 'fwd' : 'back';
             activeTab = tab;
-            const txView = document.getElementById('tabTransactions');
-            const analyticsView = document.getElementById('tabAnalytics');
-            const navTx = document.getElementById('navTx');
-            const navAnalytics = document.getElementById('navAnalytics');
 
-            if (tab === 'tx') {
-                txView.classList.remove('hide-tab'); analyticsView.classList.add('hide-tab');
-                navTx.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
-                navAnalytics.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
-                render();
-            } else {
-                txView.classList.add('hide-tab'); analyticsView.classList.remove('hide-tab');
-                navTx.className = 'spring-press flex items-center gap-2 text-slate-400 cursor-pointer';
-                navAnalytics.className = 'spring-press flex items-center gap-2 text-blue-400 cursor-pointer';
-                renderAnalytics();
-            }
+            document.getElementById('tabTransactions').classList.toggle('hide-tab', tab !== 'tx');
+            document.getElementById('tabAccounts').classList.toggle('hide-tab', tab !== 'accounts');
+            document.getElementById('tabAnalytics').classList.toggle('hide-tab', tab !== 'analytics');
+
+            const navClasses = (active) => `spring-press flex items-center gap-1.5 cursor-pointer ${active ? 'text-blue-400' : 'text-slate-400'}`;
+            document.getElementById('navTx').className = navClasses(tab === 'tx');
+            document.getElementById('navAccounts').className = navClasses(tab === 'accounts');
+            document.getElementById('navAnalytics').className = navClasses(tab === 'analytics');
+
+            const shown = tab === 'tx' ? document.getElementById('tabTransactions') : tab === 'accounts' ? document.getElementById('tabAccounts') : document.getElementById('tabAnalytics');
+            shown.classList.remove('tab-anim-fwd', 'tab-anim-back');
+            void shown.offsetWidth;
+            shown.classList.add(direction === 'fwd' ? 'tab-anim-fwd' : 'tab-anim-back');
+
+            if (tab === 'tx') render();
+            else if (tab === 'accounts') renderAccounts();
+            else renderAnalytics();
         }
 
         function setCategory(cat, isManual = false) {
@@ -795,19 +1176,71 @@
             });
         }
 
-        function openFlow(type) {
+        async function renderAccountPicker(selectedId) {
+            const accounts = await dbGetAccounts();
+            if (accounts.length === 0) return;
+            if (!accounts.some(a => a.id === selectedId)) {
+                selectedId = accounts.some(a => a.id === 'cash') ? 'cash' : accounts[0].id;
+            }
+            const picker = document.getElementById('accountPicker');
+            picker.innerHTML = '';
+            accounts.forEach(acc => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-3.5 py-2 rounded-xl text-[11px] font-bold border spring-press whitespace-nowrap cursor-pointer ${acc.id === selectedId ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-800/60 text-slate-300'}`;
+                btn.innerHTML = `<span>${acc.emoji || '💵'}</span> ${acc.name}`;
+                btn.onclick = () => {
+                    currentFlow.account_id = acc.id;
+                    localStorage.setItem('wallet_last_account', acc.id);
+                    renderAccountPicker(acc.id);
+                };
+                picker.appendChild(btn);
+            });
+            currentFlow.account_id = selectedId;
+        }
+
+        async function populateTransferSelects(presetFrom, presetTo) {
+            const accounts = await dbGetAccounts();
+            const fromSel = document.getElementById('fromAccountSelect');
+            const toSel = document.getElementById('toAccountSelect');
+            fromSel.innerHTML = ''; toSel.innerHTML = '';
+            accounts.forEach(acc => {
+                fromSel.add(new Option(`${acc.emoji || '💵'} ${acc.name}`, acc.id));
+                toSel.add(new Option(`${acc.emoji || '💵'} ${acc.name}`, acc.id));
+            });
+            const ids = accounts.map(a => a.id);
+            const lastUsed = localStorage.getItem('wallet_last_account');
+            let from = presetFrom && ids.includes(presetFrom) ? presetFrom : (ids.includes(lastUsed) ? lastUsed : ids[0]);
+            let to = presetTo && ids.includes(presetTo) ? presetTo : (ids.find(id => id !== from) || from);
+            fromSel.value = from; toSel.value = to;
+            currentFlow.from_account = from;
+            currentFlow.to_account = to;
+        }
+
+        async function openFlow(type) {
             manualCategoryOverride = false;
             document.getElementById('autoCatBadge').classList.add('hidden');
-            currentFlow = { type: type, id: null, isEditing: false, category: type === 'IN' ? 'Other' : 'Food' };
-            
+            const isTransfer = type === 'TRANSFER';
+            currentFlow = { type: type, id: null, isEditing: false, category: isTransfer ? 'Transfer' : type === 'IN' ? 'Other' : 'Food', account_id: 'cash', from_account: null, to_account: null };
+
             const titleEl = document.getElementById('flowTitle');
-            titleEl.innerText = type === 'IN' ? 'Income' : 'Expense';
-            titleEl.className = type === 'IN' ? 'font-black text-sm uppercase tracking-widest text-emerald-400' : 'font-black text-sm uppercase tracking-widest text-rose-400';
-            
+            titleEl.innerText = isTransfer ? 'Transfer' : type === 'IN' ? 'Income' : 'Expense';
+            titleEl.className = `font-black text-sm uppercase tracking-widest ${type === 'IN' ? 'text-emerald-400' : type === 'TRANSFER' ? 'text-amber-400' : 'text-rose-400'}`;
+
             document.getElementById('numAmount').value = '';
             document.getElementById('reasonInput').value = '';
             document.getElementById('deleteBtn').classList.add('hidden');
-            setCategory(currentFlow.category, false);
+
+            document.getElementById('categorySection').classList.toggle('hidden', isTransfer);
+            document.getElementById('accountPickerWrap').classList.toggle('hidden', isTransfer);
+            document.getElementById('transferPickers').classList.toggle('hidden', !isTransfer);
+
+            if (isTransfer) {
+                await populateTransferSelects();
+            } else {
+                setCategory(currentFlow.category, false);
+                await renderAccountPicker(localStorage.getItem('wallet_last_account') || 'cash');
+            }
 
             document.getElementById('flowModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('numAmount').focus(), 150);
@@ -820,15 +1253,25 @@
 
             manualCategoryOverride = false;
             document.getElementById('autoCatBadge').classList.add('hidden');
-            currentFlow = { type: item.type, id: item.id, isEditing: true, category: item.category || 'Other' };
-            
+            const isTransfer = item.type === 'TRANSFER';
+            currentFlow = { type: item.type, id: item.id, isEditing: true, category: item.category || 'Other', account_id: item.account_id || 'cash', from_account: item.from_account || null, to_account: item.to_account || null };
+
             const titleEl = document.getElementById('flowTitle');
-            titleEl.innerText = "Edit Entry";
-            titleEl.className = 'font-black text-sm uppercase tracking-widest text-white';
+            titleEl.innerText = isTransfer ? 'Edit Transfer' : 'Edit Entry';
+            titleEl.className = `font-black text-sm uppercase tracking-widest ${isTransfer ? 'text-amber-400' : 'text-white'}`;
 
             document.getElementById('numAmount').value = item.amount;
             document.getElementById('reasonInput').value = item.reason;
-            setCategory(currentFlow.category, false);
+            document.getElementById('categorySection').classList.toggle('hidden', isTransfer);
+            document.getElementById('accountPickerWrap').classList.toggle('hidden', isTransfer);
+            document.getElementById('transferPickers').classList.toggle('hidden', !isTransfer);
+
+            if (isTransfer) {
+                await populateTransferSelects(item.from_account, item.to_account);
+            } else {
+                setCategory(currentFlow.category, false);
+                await renderAccountPicker(currentFlow.account_id);
+            }
             document.getElementById('deleteBtn').classList.remove('hidden');
 
             document.getElementById('flowModal').classList.remove('hidden');
@@ -841,7 +1284,10 @@
             const amountVal = parseFloat(document.getElementById('numAmount').value);
             if (!amountVal || isNaN(amountVal) || amountVal <= 0) return alert("Please enter a valid amount");
 
-            const reason = document.getElementById('reasonInput').value.trim() || 'Other';
+            const isTransfer = currentFlow.type === 'TRANSFER';
+            if (isTransfer && currentFlow.from_account === currentFlow.to_account) return alert("From and To accounts must be different");
+
+            const reason = document.getElementById('reasonInput').value.trim() || (isTransfer ? 'Transfer' : 'Other');
             const now = new Date();
             let txToSave;
 
@@ -849,15 +1295,28 @@
                 const historyData = await dbGetAll();
                 const existing = historyData.find(t => t.id === currentFlow.id);
                 txToSave = { ...existing, amount: amountVal, reason: reason, category: currentFlow.category, edited: true };
+                if (isTransfer) {
+                    txToSave.from_account = currentFlow.from_account;
+                    txToSave.to_account = currentFlow.to_account;
+                    txToSave.account_id = currentFlow.from_account;
+                } else {
+                    txToSave.account_id = currentFlow.account_id;
+                }
             } else {
                 txToSave = {
                     id: Date.now(), type: currentFlow.type, amount: amountVal, reason: reason, category: currentFlow.category,
+                    account_id: isTransfer ? currentFlow.from_account : currentFlow.account_id,
                     time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
                     date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
                     timestamp: now.getTime(), edited: false
                 };
+                if (isTransfer) {
+                    txToSave.from_account = currentFlow.from_account;
+                    txToSave.to_account = currentFlow.to_account;
+                }
             }
 
+            if (!currentFlow.isEditing && !isTransfer) localStorage.setItem('wallet_last_account', currentFlow.account_id);
             await dbPut(txToSave); closeModal(); render();
         }
 
@@ -898,11 +1357,36 @@
 
             list.innerHTML = '';
 
+            const accounts = await dbGetAccounts();
+            if (currentAccountFilter && !accounts.some(a => a.id === currentAccountFilter)) currentAccountFilter = null;
+            const accBalances = {};
             historyData.forEach(tx => {
                 const amt = Number(tx.amount) || 0;
-                if (tx.type === 'IN') { totalBalance += amt; totalIncome += amt; } 
-                else { totalBalance -= amt; if (tx.date === todayStr) todaySpent += amt; }
+                if (tx.type === 'TRANSFER') {
+                    accBalances[tx.from_account] = (accBalances[tx.from_account] || 0) - amt;
+                    accBalances[tx.to_account] = (accBalances[tx.to_account] || 0) + amt;
+                    return;
+                }
+                if (tx.type === 'IN') { totalBalance += amt; totalIncome += amt; accBalances[tx.account_id] = (accBalances[tx.account_id] || 0) + amt; }
+                else { totalBalance -= amt; accBalances[tx.account_id] = (accBalances[tx.account_id] || 0) - amt; if (tx.date === todayStr) todaySpent += amt; }
             });
+
+            // Wallet account pills (tap to filter history)
+            const pillsEl = document.getElementById('accountPills');
+            pillsEl.innerHTML = '';
+            const makePill = (id, emoji, label, bal, active) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `spring-press flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black border cursor-pointer ${active ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-800/60 border-white/10 text-slate-300'}`;
+                btn.innerHTML = `<span>${emoji}</span> ${label} <span class="${active ? 'text-white' : 'text-slate-400'}">${bal !== null ? '₹' + formatCurrency(bal) : ''}</span>`;
+                btn.onclick = () => {
+                    currentAccountFilter = currentAccountFilter === id ? null : id;
+                    render();
+                };
+                pillsEl.appendChild(btn);
+            };
+            makePill(null, '🌐', 'All', totalBalance, currentAccountFilter === null);
+            accounts.forEach(acc => makePill(acc.id, acc.emoji || '💵', acc.name, accBalances[acc.id] || 0, currentAccountFilter === acc.id));
 
             const retainedBar = document.getElementById('retainedBar');
             const retainedLabel = document.getElementById('retainedPctLabel');
@@ -924,19 +1408,25 @@
             budgetBar.style.width = `${budgetPct}%`;
             budgetBar.className = budgetPct >= 90 ? 'bg-rose-500 h-full rounded-full transition-all duration-500' : budgetPct >= 65 ? 'bg-amber-400 h-full rounded-full transition-all duration-500' : 'bg-emerald-400 h-full rounded-full transition-all duration-500';
 
-            const filteredList = historyData.filter(tx => 
-                (tx.reason || '').toLowerCase().includes(search) || 
-                (tx.category || '').toLowerCase().includes(search)
-            );
+            const filteredList = historyData.filter(tx => {
+                const accMatch = !currentAccountFilter ||
+                    (tx.type === 'TRANSFER'
+                        ? (tx.from_account === currentAccountFilter || tx.to_account === currentAccountFilter)
+                        : tx.account_id === currentAccountFilter);
+                return accMatch &&
+                    ((tx.reason || '').toLowerCase().includes(search) ||
+                     (tx.category || '').toLowerCase().includes(search));
+            });
 
-            const searchSummary = document.getElementById('searchSummary');
-            const clearSearchBtn = document.getElementById('clearSearchBtn');
-            if (search.length > 0) {
-                let searchOut = 0; let searchIn = 0;
-                filteredList.forEach(tx => {
-                    if (tx.type === 'IN') searchIn += Number(tx.amount) || 0;
-                    else searchOut += Number(tx.amount) || 0;
-                });
+                const searchSummary = document.getElementById('searchSummary');
+                const clearSearchBtn = document.getElementById('clearSearchBtn');
+                if (search.length > 0) {
+                    let searchOut = 0; let searchIn = 0;
+                    filteredList.forEach(tx => {
+                        if (tx.type === 'TRANSFER') return;
+                        if (tx.type === 'IN') searchIn += Number(tx.amount) || 0;
+                        else searchOut += Number(tx.amount) || 0;
+                    });
 
                 document.getElementById('searchCount').innerText = `${filteredList.length} ${filteredList.length === 1 ? 'entry' : 'entries'} for "${rawSearch.trim()}"`;
                 document.getElementById('searchTotalOut').innerText = `Spent: -₹${formatCurrency(searchOut)}`;
@@ -957,19 +1447,27 @@
             }
 
             filteredList.forEach(tx => {
+                const isTransfer = tx.type === 'TRANSFER';
                 const item = document.createElement('div');
                 item.className = 'glass-card p-4 rounded-3xl flex justify-between items-center spring-press cursor-pointer';
                 item.onclick = () => openEdit(tx.id);
+                const acc = accounts.find(a => a.id === (isTransfer ? tx.from_account : tx.account_id));
+                const amountHtml = isTransfer
+                    ? `<span class="text-amber-300 text-sm font-black">⇄ ₹${formatCurrency(tx.amount)}</span>`
+                    : `<p class="font-black text-lg ${tx.type === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">${tx.type === 'IN' ? '+' : '-'}₹${formatCurrency(tx.amount)}</p>`;
+                const subLine = isTransfer
+                    ? `${(accounts.find(a => a.id === tx.from_account) || {}).name || '?'} → ${(accounts.find(a => a.id === tx.to_account) || {}).name || '?'}`
+                    : `${tx.date} • ${tx.time}`;
                 item.innerHTML = `<div>
                     <div class="flex items-center gap-2">
                         <p class="font-bold text-sm tracking-tight">${tx.reason}</p>
-                        <span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 font-bold uppercase border border-white/5">${tx.category || 'Other'}</span>
+                        ${isTransfer
+                            ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-bold uppercase border border-amber-400/20">Transfer</span>'
+                            : `<span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 font-bold uppercase border border-white/5">${tx.category || 'Other'}</span>`}
                     </div>
-                    <p class="text-[10px] text-slate-500 font-bold mt-1 uppercase">${tx.date} • ${tx.time} ${tx.edited ? '• (edited)' : ''}</p>
+                    <p class="text-[10px] text-slate-500 font-bold mt-1 uppercase">${subLine}${!isTransfer && acc ? ` • ${acc.emoji || ''} ${acc.name}` : ''} ${tx.edited ? '• (edited)' : ''}</p>
                 </div>
-                <p class="font-black text-lg ${tx.type === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">
-                    ${tx.type === 'IN' ? '+' : '-'}₹${formatCurrency(tx.amount)}
-                </p>`;
+                ${amountHtml}`;
                 list.appendChild(item);
             });
 
@@ -1033,10 +1531,11 @@
                 });
                 
                 const maxVal = Math.max(...days.map(d => d.total), 100);
+                let chartHTML = '';
                 days.forEach((d, idx) => {
                     const barHeight = Math.round((d.total / maxVal) * 90);
                     const radius = currentAnalyticsFilter === '7D' ? 'rounded-t-md' : 'rounded-t-sm';
-                    
+
                     let labelText = ''; let amtText = '';
                     if (currentAnalyticsFilter === '7D') {
                         labelText = `<span class="text-[10px] text-slate-400 font-bold mt-1">${d.dayName}</span>`;
@@ -1045,14 +1544,15 @@
                         const isLabel = idx === 0 || idx === 14 || idx === 29;
                         labelText = isLabel ? `<span class="text-[9px] text-slate-500 font-bold mt-1">${d.dayName}</span>` : `<span class="text-[9px] text-transparent mt-1">-</span>`;
                     }
-                    
-                    chart.innerHTML += `
+
+                    chartHTML += `
                         <div class="flex-1 flex flex-col items-center justify-end h-full">
                             ${amtText}
                             <div class="w-full bg-gradient-to-t from-rose-600 to-rose-400 ${radius} transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px; opacity: ${d.total > 0 ? '1' : '0.3'};"></div>
                             ${labelText}
                         </div>`;
                 });
+                chart.innerHTML = chartHTML;
             } else {
                 const monthsMap = {};
                 filteredTx.forEach(tx => {
@@ -1068,16 +1568,18 @@
                 if (monthsArr.length === 0) {
                     chart.innerHTML = `<div class="w-full text-center text-slate-500 text-xs pb-4">No spending data yet.</div>`;
                 } else {
-                    const maxVal = Math.max(...monthsArr.map(m => m.total), 100);
-                    monthsArr.forEach(m => {
-                        const barHeight = Math.round((m.total / maxVal) * 90);
-                        chart.innerHTML += `
-                            <div class="flex-1 flex flex-col items-center justify-end h-full">
-                                <span class="text-[9px] text-slate-400 font-bold">${m.total ? '₹' + formatCurrency(m.total) : ''}</span>
-                                <div class="w-full max-w-[35px] bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
-                                <span class="text-[10px] text-slate-400 font-bold mt-1">${m.label}</span>
-                            </div>`;
-                    });
+                const maxVal = Math.max(...monthsArr.map(m => m.total), 100);
+                let monthsHTML = '';
+                monthsArr.forEach(m => {
+                    const barHeight = Math.round((m.total / maxVal) * 90);
+                    monthsHTML += `
+                        <div class="flex-1 flex flex-col items-center justify-end h-full">
+                            <span class="text-[9px] text-slate-400 font-bold">${m.total ? '₹' + formatCurrency(m.total) : ''}</span>
+                            <div class="w-full max-w-[35px] bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-lg transition-all duration-300 shadow-lg shadow-rose-950/40" style="height: ${barHeight}px; min-height: 4px;"></div>
+                            <span class="text-[10px] text-slate-400 font-bold mt-1">${m.label}</span>
+                        </div>`;
+                });
+                chart.innerHTML = monthsHTML;
                 }
             }
 
@@ -1108,7 +1610,8 @@
 
         async function exportJSONBackup() {
             const data = await dbGetAll();
-            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const accounts = await dbGetAccounts();
+            const blob = new Blob([JSON.stringify({ version: 2, transactions: data, accounts })], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
             a.download = `wallet-backup-${new Date().toISOString().slice(0, 10)}.wallet`;
@@ -1118,11 +1621,17 @@
 
         async function exportExcel() {
             const data = await dbGetAll();
-            let csv = "Date,Time,Type,Category,Note,Amount\n";
+            const accounts = await dbGetAccounts();
+            const accMap = {};
+            accounts.forEach(a => accMap[a.id] = a.name);
+            let csv = "Date,Time,Type,Category,Account,Note,Amount\n";
             data.forEach(row => {
                 let note = `"${(row.reason || '').replace(/"/g, '""')}"`;
-                let type = row.type === 'IN' ? 'Income' : 'Expense';
-                csv += `${row.date},${row.time},${type},${row.category},${note},${row.amount}\n`;
+                let type = row.type === 'IN' ? 'Income' : row.type === 'TRANSFER' ? 'Transfer' : 'Expense';
+                let account = row.type === 'TRANSFER'
+                    ? `"${(accMap[row.from_account] || '?')} -> ${(accMap[row.to_account] || '?')}"`
+                    : (accMap[row.account_id] || 'Cash');
+                csv += `${row.date},${row.time},${type},${row.category},${account},${note},${row.amount}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -1134,6 +1643,9 @@
 
         async function exportPDF() {
             const data = await dbGetAll();
+            const accounts = await dbGetAccounts();
+            const accMap = {};
+            accounts.forEach(a => accMap[a.id] = a.name);
             let html = `
                 <html><head><title>Wallet Pro Report</title>
                 <style>
@@ -1146,12 +1658,15 @@
                     .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; }
                 </style></head><body>
                 <h2>Expense Report</h2>
-                <table><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th></tr>
+                <table><tr><th>Date</th><th>Category</th><th>Account</th><th>Note</th><th>Amount</th></tr>
             `;
             let totalSpent = 0;
             data.forEach(row => {
                 if(row.type === 'OUT') totalSpent += Number(row.amount);
-                html += `<tr><td>${row.date}</td><td>${row.category}</td><td>${row.reason || '-'}</td><td class="${row.type === 'IN'?'in':'out'}">₹${row.amount}</td></tr>`;
+                let account = row.type === 'TRANSFER'
+                    ? `${(accMap[row.from_account] || '?')} -> ${(accMap[row.to_account] || '?')}`
+                    : (accMap[row.account_id] || 'Cash');
+                html += `<tr><td>${row.date}</td><td>${row.category}</td><td>${account}</td><td>${row.reason || '-'}</td><td class="${row.type === 'IN'?'in':'out'}">₹${row.amount}</td></tr>`;
             });
             html += `</table><div class="total">Total Spent: ₹${totalSpent}</div><script>window.onload=function(){window.print();}<\/script></body></html>`;
             const iframe = document.createElement('iframe');
@@ -1160,33 +1675,129 @@
             setTimeout(() => { document.body.removeChild(iframe); closeExportModal(); }, 3000);
         }
 
+        function restoreBackup(txs, accs) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_NAME, ACC_STORE_NAME], 'readwrite');
+                const txStore = tx.objectStore(STORE_NAME);
+                const accStore = tx.objectStore(ACC_STORE_NAME);
+                txStore.clear();
+                if (accs && accs.length > 0) {
+                    accStore.clear();
+                    accs.forEach(acc => accStore.put({
+                        id: String(acc.id || 'acc' + Date.now()),
+                        name: String(acc.name || 'Account'),
+                        emoji: String(acc.emoji || '💵'),
+                        type: String(acc.type || 'cash'),
+                        order: Number(acc.order || 0),
+                        created_at: Number(acc.created_at || Date.now())
+                    }));
+                }
+                txs.forEach(t => txStore.put(t));
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error || new Error('Restore aborted'));
+            });
+        }
+
         function importBackupFile(event) {
-            const file = event.target.files[0];
+            const input = event.target;
+            const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = async function(e) {
+                let parsed;
                 try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (Array.isArray(parsed)) {
-                        await dbClearAll();
-                        for(const item of parsed) { await dbPut(item, false); }
-                        await syncWithCloud();
-                        alert("Backup restored into IndexedDB!"); render();
-                    } else alert("Invalid backup format.");
-                } catch (err) { alert("Error parsing file."); }
+                    parsed = JSON.parse(e.target.result);
+                } catch (err) {
+                    alert("This file is not valid JSON. Please pick the .wallet backup file, not the HTML file.");
+                    input.value = '';
+                    return;
+                }
+
+                let txs = null; let accs = null;
+                if (Array.isArray(parsed)) {
+                    txs = parsed;
+                } else if (parsed && Array.isArray(parsed.transactions)) {
+                    txs = parsed.transactions;
+                    accs = Array.isArray(parsed.accounts) ? parsed.accounts : null;
+                }
+
+                if (txs === null) {
+                    alert("Invalid backup format.");
+                    input.value = '';
+                    return;
+                }
+                if (txs.length === 0) {
+                    alert("This backup contains no transactions.");
+                    input.value = '';
+                    return;
+                }
+
+                const bad = txs.filter(t => !t || t.id === undefined || t.id === null || isNaN(Number(t.id)));
+                if (bad.length > 0) {
+                    alert(`Backup is corrupted: ${bad.length} entries are missing valid IDs. Nothing was changed.`);
+                    input.value = '';
+                    return;
+                }
+                txs = txs.map(t => ({ ...t, id: Number(t.id), amount: Number(t.amount || 0) }));
+
+                const summary = `${txs.length} transactions` + (accs && accs.length ? ` and ${accs.length} accounts` : '');
+                if (!confirm(`Restore ${summary}? This replaces the data on this device.`)) {
+                    input.value = '';
+                    return;
+                }
+
+                try {
+                    await restoreBackup(txs, accs);
+                    await ensureAccountData();
+                    if (supabaseClient && currentUser) syncWithCloud();
+                    alert("Backup restored successfully!");
+                    await render();
+                    renderChips();
+                    if (activeTab === 'accounts') renderAccounts();
+                } catch (err) {
+                    alert("Restore failed: " + (err && err.message ? err.message : err));
+                }
+                input.value = '';
             };
-            reader.readAsText(file); event.target.value = '';
+            reader.readAsText(file);
         }
 
         window.onload = async () => {
             try {
                 await initDB();
-                await migrateIfNeeded();
-                renderChips();
-                await render();
-                await checkUserSession();
-            } catch(e) { console.error("Database Error:", e); alert("Failed to initialize database."); }
-            if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
+            } catch (e) {
+                console.error("Database Error:", e);
+                alert("Failed to open the database: " + (e && e.message ? e.message : e));
+                return;
+            }
+            try { await migrateIfNeeded(); } catch (e) { console.error("Migration error:", e); }
+            try { await ensureAccountData(); } catch (e) { console.error("Account setup error:", e); }
+            try { renderChips(); } catch (e) { console.error("Chips error:", e); }
+            try { await render(); } catch (e) { console.error("Render error:", e); }
+            try { await checkUserSession(); } catch (e) { console.error("Session error:", e); }
+
+            // First-visit nudge: open the cloud-sync modal once so new users discover sign-in
+            if (!localStorage.getItem('wallet_first_auth_shown') && supabaseClient && !currentUser) {
+                localStorage.setItem('wallet_first_auth_shown', '1');
+                setTimeout(() => openAuthModal(), 700);
+            }
+
+            if ('serviceWorker' in navigator) {
+                let swRefreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!swRefreshing && navigator.serviceWorker.controller) {
+                        swRefreshing = true;
+                        window.location.reload();
+                    }
+                });
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => reg.update())
+                    .catch(err => console.error(err));
+            }
+            window.addEventListener('online', () => {
+                if (supabaseClient && currentUser) syncWithCloud();
+            });
         };
     </script>
 </body>
