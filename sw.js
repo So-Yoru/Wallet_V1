@@ -1,9 +1,9 @@
-const CACHE_NAME = 'wallet-pro-v1';
-const ASSETS = [
-  './',
-  './index.html',
+const CACHE_NAME = 'wallet-pro-v3';
+const ASSETS_TO_CACHE = [
+  './index.html?v=' + new Date().getTime(),
   './manifest.json',
-  './icon-192.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install Event: Cache all essential files
